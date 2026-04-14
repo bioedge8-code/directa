@@ -28,8 +28,10 @@ def submit_generation(
 ) -> dict:
     _ensure_key()
 
-    # Model selection priority: video ref > image ref > text only
-    if ref_video_url and not ref_character_url:
+    # Model selection: video ref → reference-to-video (supports image too)
+    #                  image only → image-to-video
+    #                  text only  → text-to-video
+    if ref_video_url:
         model = "bytedance/seedance-2.0/fast/reference-to-video"
         arguments = {
             "prompt": english_prompt,
@@ -37,6 +39,8 @@ def submit_generation(
             "duration": str(duration),
             "aspect_ratio": aspect_ratio,
         }
+        if ref_character_url:
+            arguments["image_url"] = ref_character_url
     elif ref_character_url:
         model = "bytedance/seedance-2.0/fast/image-to-video"
         arguments = {
