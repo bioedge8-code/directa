@@ -85,6 +85,7 @@ class GenerateRequest(BaseModel):
     english_prompt: str
     arabic_prompt: str
     references: list = []
+    duration: str = "5"
 
 @app.post("/api/generate")
 async def api_generate(req: GenerateRequest):
@@ -113,6 +114,7 @@ async def api_generate(req: GenerateRequest):
             english_prompt=req.english_prompt,
             ref_character_url=ref_char_url,
             ref_audio_url=ref_audio_url,
+            duration=int(req.duration),
         )
         update_generation(generation_id, {
             "status": "processing",

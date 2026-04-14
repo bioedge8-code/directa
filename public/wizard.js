@@ -23,6 +23,7 @@ const wizardData = (saved && saved.data) || {
   shot_type: null,
   depth_of_field: null,
   pace: null,
+  duration: '5',
   fixed_elements: [],
   avoid_elements: [],
   avoid_extra: '',
@@ -43,6 +44,45 @@ function saveState() {
 
 function clearState() {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+// ── Templates ────────────────────────────────────────────────
+const TEMPLATES_KEY = 'directa_templates';
+
+function getTemplates() {
+  return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]');
+}
+
+function saveTemplate(name) {
+  const templates = getTemplates();
+  templates.push({
+    name,
+    date: new Date().toLocaleDateString('ar-SA'),
+    data: { ...wizardData },
+  });
+  localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+}
+
+function deleteTemplate(idx) {
+  const templates = getTemplates();
+  templates.splice(idx, 1);
+  localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+}
+
+function loadTemplate(idx) {
+  const templates = getTemplates();
+  const tpl = templates[idx];
+  if (!tpl) return;
+  Object.assign(wizardData, tpl.data);
+  // Clear refs since they belong to old sessions
+  wizardData.ref_character = null;
+  wizardData.ref_lighting = null;
+  wizardData.ref_camera = null;
+  wizardData.ref_audio = null;
+  currentStep = 1;
+  hide($('#landing-page'));
+  show($('#wizard-view'));
+  renderStep();
 }
 
 // ── API Helper ───────────────────────────────────────────────
@@ -125,7 +165,7 @@ function isStepValid() {
     case 3: return wizardData.subject.trim().length > 0 && wizardData.environment.trim().length > 0;
     case 4: case 5: case 6: case 7: return true; // optional
     case 8: return !!wizardData.lighting && !!wizardData.camera_movement;
-    case 9: return !!wizardData.shot_type && !!wizardData.depth_of_field && !!wizardData.pace;
+    case 9: return !!wizardData.shot_type && !!wizardData.depth_of_field && !!wizardData.pace && !!wizardData.duration;
     case 10: return true;
     default: return true;
   }
@@ -490,6 +530,13 @@ function renderStep9(card) {
     ['⚖️ متوسط ومتوازن', 'medium_paced'],
     ['⚡ سريع وحيوي', 'fast_paced'],
   ], 'pace');
+
+  addSectionLabel(card, 'مدة الفيديو');
+  addOptionGrid(card, [
+    ['5 ثوانٍ', '5'],
+    ['10 ثوانٍ', '10'],
+    ['15 ثانية', '15'],
+  ], 'duration');
 }
 
 function renderStep10(card) {
@@ -578,10 +625,26 @@ async function renderStep11(card) {
     card.appendChild(refsContainer);
   }
 
-  // Edit toggle
+  // English prompt preview
+  const enLabel = document.createElement('div');
+  enLabel.className = 'review-label';
+  enLabel.style.marginTop = '16px';
+  enLabel.textContent = 'البرومبت الفعلي (يُرسل لـ fal.ai)';
+  card.appendChild(enLabel);
+
+  const enCard = document.createElement('div');
+  enCard.className = 'review-card';
+  enCard.style.direction = 'ltr';
+  enCard.style.textAlign = 'left';
+  enCard.style.fontSize = '0.78rem';
+  enCard.style.color = '#888';
+  enCard.textContent = builtPrompts.english_prompt;
+  card.appendChild(enCard);
+
+  // Edit toggle for Arabic
   const editToggle = document.createElement('span');
   editToggle.className = 'edit-toggle';
-  editToggle.textContent = 'تعديل البرومبت';
+  editToggle.textContent = 'تعديل البرومبت العربي';
   let editOpen = false;
   const editArea = document.createElement('textarea');
   editArea.className = 'text-input hidden';
@@ -599,12 +662,32 @@ async function renderStep11(card) {
       editToggle.textContent = 'إخفاء التعديل';
     } else {
       hide(editArea);
-      editToggle.textContent = 'تعديل البرومبت';
+      editToggle.textContent = 'تعديل البرومبت العربي';
     }
   });
 
   card.appendChild(editToggle);
   card.appendChild(editArea);
+
+  // Duration display
+  const durLabel = document.createElement('div');
+  durLabel.style.cssText = 'font-size:0.82rem;color:#888;margin-top:12px;';
+  durLabel.textContent = `المدة: ${wizardData.duration || '5'} ثوانٍ`;
+  card.appendChild(durLabel);
+
+  // Save as template button
+  const saveTemplateBtn = document.createElement('button');
+  saveTemplateBtn.className = 'skip-btn';
+  saveTemplateBtn.style.marginTop = '12px';
+  saveTemplateBtn.textContent = '💾 حفظ كقالب';
+  saveTemplateBtn.addEventListener('click', () => {
+    const name = prompt('اسم القالب:');
+    if (!name) return;
+    saveTemplate(name);
+    saveTemplateBtn.textContent = '✓ تم الحفظ';
+    saveTemplateBtn.disabled = true;
+  });
+  card.appendChild(saveTemplateBtn);
 
   // Generate button
   const genBtn = document.createElement('button');
@@ -651,6 +734,7 @@ async function startGeneration(btn) {
         english_prompt: builtPrompts.english_prompt,
         arabic_prompt: builtPrompts.arabic_prompt,
         references,
+        duration: wizardData.duration || '5',
       }),
     });
 
@@ -757,6 +841,7 @@ function showVideoResult(videoUrl) {
           english_prompt: builtPrompts.english_prompt,
           arabic_prompt: builtPrompts.arabic_prompt,
           references,
+          duration: wizardData.duration || '5',
         }),
       });
       generationId = result.generation_id;
@@ -824,6 +909,7 @@ function showError(errorMsg) {
           english_prompt: builtPrompts.english_prompt,
           arabic_prompt: builtPrompts.arabic_prompt,
           references,
+          duration: wizardData.duration || '5',
         }),
       });
       generationId = result.generation_id;
@@ -943,6 +1029,35 @@ function startWizard() {
   renderStep();
 }
 
+function renderTemplatesOnLanding() {
+  const container = document.getElementById('landing-templates');
+  if (!container) return;
+  const templates = getTemplates();
+  if (templates.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  let html = '<div class="section-label" style="text-align:center;margin-top:32px;">القوالب المحفوظة</div><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;">';
+  templates.forEach((tpl, i) => {
+    html += `<button class="chip template-chip" data-idx="${i}">${tpl.name}<span class="template-delete" data-idx="${i}" style="margin-right:6px;color:#666;cursor:pointer;"> ✕</span></button>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+
+  container.querySelectorAll('.template-chip').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (e.target.classList.contains('template-delete')) {
+        e.stopPropagation();
+        const idx = parseInt(e.target.dataset.idx);
+        deleteTemplate(idx);
+        renderTemplatesOnLanding();
+        return;
+      }
+      loadTemplate(parseInt(btn.dataset.idx));
+    });
+  });
+}
+
 
 // ── Init ─────────────────────────────────────────────────────
 
@@ -960,6 +1075,8 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     showHistory();
   });
+
+  renderTemplatesOnLanding();
 
   // Restore saved state — skip landing if wizard was in progress
   if (saved && saved.step > 1) {
