@@ -1,9 +1,12 @@
 // ── State ────────────────────────────────────────────────────
-const SESSION_ID = crypto.randomUUID();
-let currentStep = 1;
+const STORAGE_KEY = 'directa_state';
+const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+
+const SESSION_ID = (saved && saved.sessionId) || crypto.randomUUID();
+let currentStep = (saved && saved.step) || 1;
 const TOTAL_STEPS = 11;
 
-const wizardData = {
+const wizardData = (saved && saved.data) || {
   video_type: null,
   goal: null,
   mood: null,
@@ -27,6 +30,18 @@ let builtPrompts = null;
 let generationId = null;
 let generationModel = null;
 let pollingTimer = null;
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    sessionId: SESSION_ID,
+    step: currentStep,
+    data: wizardData,
+  }));
+}
+
+function clearState() {
+  localStorage.removeItem(STORAGE_KEY);
+}
 
 // ── API Helper ───────────────────────────────────────────────
 async function api(path, opts = {}) {
@@ -76,6 +91,7 @@ function renderStep() {
   container.appendChild(card);
   updateProgress();
   updateNav();
+  saveState();
 }
 
 // ── Navigation ───────────────────────────────────────────────
@@ -163,6 +179,7 @@ function addOptionGrid(card, options, field, cols = 2) {
       grid.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       updateNav();
+      saveState();
     });
     grid.appendChild(btn);
   });
@@ -185,6 +202,7 @@ function addTextInput(card, field, label, placeholder, isTextarea = false) {
   input.addEventListener('input', () => {
     wizardData[field] = input.value;
     updateNav();
+    saveState();
   });
   group.appendChild(input);
 
@@ -258,6 +276,7 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
       if (!wizardData[refField]) wizardData[refField] = {};
       wizardData[refField].url = result.url;
       wizardData[refField].file_type = result.file_type;
+      saveState();
 
     } catch (err) {
       spinner.classList.remove('visible');
@@ -300,6 +319,7 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
   descInput.addEventListener('input', () => {
     if (!wizardData[refField]) wizardData[refField] = {};
     wizardData[refField].description = descInput.value;
+    saveState();
   });
   descInput.addEventListener('click', (e) => e.stopPropagation());
   descGroup.appendChild(descInput);
@@ -334,6 +354,7 @@ function addChipGrid(card, options, field) {
         wizardData[field].push(value);
         chip.classList.add('selected');
       }
+      saveState();
     });
     grid.appendChild(chip);
   });
@@ -758,6 +779,7 @@ function showVideoResult(videoUrl) {
     builtPrompts = null;
     generationId = null;
     currentStep = 1;
+    clearState();
     show($('#nav-buttons'));
     renderStep();
   });
@@ -934,4 +956,11 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     showHistory();
   });
+
+  // Restore saved state — skip landing if wizard was in progress
+  if (saved && saved.step > 1) {
+    hide($('#landing-page'));
+    show($('#wizard-view'));
+    renderStep();
+  }
 });
