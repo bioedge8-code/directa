@@ -4,14 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Directa — صانع الفيديو بالذكاء الاصطناعي</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <meta name="theme-color" content="#080808">
 </head>
 <body>
 
-  <div id="progress-bar" style="width: 0%"></div>
+  <!-- Landing Page -->
+  <div id="landing-page" class="landing">
+    <div class="landing-content">
+      <div class="landing-logo">Directa</div>
+      <div class="landing-tagline">حوّل رؤيتك إلى فيديو سينمائي</div>
+      <div class="landing-sub">اختر، وصف، وخلّ الذكاء الاصطناعي يخرج لك المشهد</div>
+      <button class="landing-btn" id="btn-start">ابدأ الآن</button>
+      <div class="landing-history" id="landing-history">📋 مشاريعي السابقة</div>
+    </div>
+    <div class="landing-footer">Powered by fal.ai</div>
+  </div>
 
-  <div id="wizard-view">
+  <!-- Wizard -->
+  <div id="wizard-view" class="hidden">
+    <div id="progress-bar" style="width: 0%"></div>
+
     <div class="header">
       <span class="logo">Directa</span>
       <a href="#" class="history-link" id="history-link">📋 مشاريعي</a>

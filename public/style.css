@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Cinzel:wght@700&display=swap');
-
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -18,7 +16,6 @@
   --success: #2d6a4f;
   --error: #8b2c2c;
   --font: 'Cairo', sans-serif;
-  --font-logo: 'Cinzel', serif;
 }
 
 html {
@@ -26,12 +23,91 @@ html {
 }
 
 body {
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   background: var(--bg);
   color: var(--text);
   direction: rtl;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ── Landing Page ─────────────────────── */
+
+.landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
+  padding: 24px;
+}
+
+.landing-content {
+  animation: fadeSlideIn 0.6s ease;
+}
+
+.landing-logo {
+  font-family: 'Cairo', sans-serif;
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 4px;
+  margin-bottom: 16px;
+}
+
+.landing-tagline {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.landing-sub {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+.landing-btn {
+  display: inline-block;
+  padding: 14px 48px;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.landing-btn:hover {
+  background: var(--gold-hover);
+  transform: translateY(-2px);
+}
+
+.landing-history {
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.landing-history:hover {
+  color: var(--gold);
+}
+
+.landing-footer {
+  position: fixed;
+  bottom: 24px;
+  color: #2a2a2a;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
 }
 
 /* ── Progress Bar ─────────────────────── */
@@ -58,17 +134,11 @@ body {
 }
 
 .logo {
-  font-family: var(--font-logo);
-  font-size: 1.6rem;
-  color: var(--gold);
-  letter-spacing: 2px;
-}
-
-.logo-ar {
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   font-weight: 800;
   font-size: 1.6rem;
   color: var(--gold);
+  letter-spacing: 2px;
 }
 
 .history-link {
@@ -149,7 +219,7 @@ body {
   border-radius: 8px;
   padding: 12px 14px;
   color: var(--text);
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   font-size: 0.88rem;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -193,18 +263,26 @@ body {
   color: var(--text);
 }
 
+input, textarea, select {
+  font-family: 'Cairo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
 .text-input {
   width: 100%;
-  background: var(--bg);
+  background: var(--bg) !important;
   border: 1.5px solid #2a2a2a;
   border-radius: 8px;
   padding: 12px 14px;
-  color: var(--text);
-  font-family: var(--font);
+  color: var(--text) !important;
+  font-family: 'Cairo', sans-serif;
   font-size: 0.88rem;
   direction: rtl;
   transition: border-color 0.15s;
   resize: vertical;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .text-input:focus {
@@ -320,11 +398,11 @@ textarea.text-input {
   width: 100%;
   margin-top: 16px;
   padding: 10px;
-  background: transparent;
+  background: var(--card);
   border: 1px solid #2a2a2a;
   border-radius: 8px;
   color: var(--muted);
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   font-size: 0.82rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -348,7 +426,7 @@ textarea.text-input {
   border: 1.5px solid #2a2a2a;
   border-radius: 20px;
   padding: 7px 14px;
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   font-size: 0.8rem;
   color: var(--text);
   cursor: pointer;
@@ -377,7 +455,7 @@ textarea.text-input {
   flex: 1;
   padding: 12px;
   border-radius: 8px;
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -386,7 +464,7 @@ textarea.text-input {
 }
 
 .nav-btn.back {
-  background: transparent;
+  background: var(--card);
   border: 1px solid #2a2a2a;
   color: var(--muted);
 }
@@ -473,7 +551,7 @@ textarea.text-input {
   color: #000;
   border: none;
   border-radius: 10px;
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -566,7 +644,7 @@ textarea.text-input {
 .result-btn {
   padding: 12px;
   border-radius: 8px;
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -715,7 +793,7 @@ textarea.text-input {
   font-size: 0.7rem;
   cursor: pointer;
   padding: 4px 0;
-  font-family: var(--font);
+  font-family: 'Cairo', sans-serif;
 }
 
 .history-delete-btn:hover {

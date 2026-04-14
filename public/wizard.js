@@ -923,15 +923,29 @@ function hideHistory() {
 }
 
 
+// ── Landing Page ─────────────────────────────────────────────
+
+function startWizard() {
+  hide($('#landing-page'));
+  show($('#wizard-view'));
+  renderStep();
+}
+
+
 // ── Init ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-start').addEventListener('click', startWizard);
+  document.getElementById('landing-history').addEventListener('click', () => {
+    hide($('#landing-page'));
+    show($('#wizard-view'));
+    renderStep();
+    showHistory();
+  });
   document.getElementById('btn-next').addEventListener('click', goNext);
   document.getElementById('btn-back').addEventListener('click', goBack);
   document.getElementById('history-link').addEventListener('click', (e) => {
     e.preventDefault();
     showHistory();
   });
-
-  renderStep();
 });
