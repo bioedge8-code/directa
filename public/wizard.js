@@ -24,6 +24,8 @@ const wizardData = (saved && saved.data) || {
   depth_of_field: null,
   pace: null,
   duration: '5',
+  aspect_ratio: '16:9',
+  resolution: '720p',
   fixed_elements: [],
   avoid_elements: [],
   avoid_extra: '',
@@ -165,7 +167,7 @@ function isStepValid() {
     case 3: return wizardData.subject.trim().length > 0 && wizardData.environment.trim().length > 0;
     case 4: case 5: case 6: case 7: return true; // optional
     case 8: return !!wizardData.lighting && !!wizardData.camera_movement;
-    case 9: return !!wizardData.shot_type && !!wizardData.depth_of_field && !!wizardData.pace && !!wizardData.duration;
+    case 9: return !!wizardData.shot_type && !!wizardData.depth_of_field && !!wizardData.pace && !!wizardData.duration && !!wizardData.aspect_ratio && !!wizardData.resolution;
     case 10: return true;
     default: return true;
   }
@@ -537,6 +539,20 @@ function renderStep9(card) {
     ['10 ثوانٍ', '10'],
     ['15 ثانية', '15'],
   ], 'duration');
+
+  addSectionLabel(card, 'أبعاد الفيديو');
+  addOptionGrid(card, [
+    ['🖥️ أفقي — 16:9', '16:9'],
+    ['📱 عمودي — 9:16', '9:16'],
+    ['⬜ مربع — 1:1', '1:1'],
+    ['🎬 سينمائي عريض — 21:9', '21:9'],
+  ], 'aspect_ratio');
+
+  addSectionLabel(card, 'الدقة');
+  addOptionGrid(card, [
+    ['720p — جودة عالية', '720p'],
+    ['480p — أسرع', '480p'],
+  ], 'resolution');
 }
 
 function renderStep10(card) {
@@ -735,6 +751,8 @@ async function startGeneration(btn) {
         arabic_prompt: builtPrompts.arabic_prompt,
         references,
         duration: wizardData.duration || '5',
+        aspect_ratio: wizardData.aspect_ratio || '16:9',
+        resolution: wizardData.resolution || '720p',
       }),
     });
 
@@ -842,6 +860,8 @@ function showVideoResult(videoUrl) {
           arabic_prompt: builtPrompts.arabic_prompt,
           references,
           duration: wizardData.duration || '5',
+        aspect_ratio: wizardData.aspect_ratio || '16:9',
+        resolution: wizardData.resolution || '720p',
         }),
       });
       generationId = result.generation_id;
@@ -910,6 +930,8 @@ function showError(errorMsg) {
           arabic_prompt: builtPrompts.arabic_prompt,
           references,
           duration: wizardData.duration || '5',
+        aspect_ratio: wizardData.aspect_ratio || '16:9',
+        resolution: wizardData.resolution || '720p',
         }),
       });
       generationId = result.generation_id;

@@ -1,15 +1,6 @@
 import os
 import fal_client
 
-# Negative prompt — always sent to block common AI artifacts
-NEGATIVE_PROMPT = (
-    "news broadcast, 3d animation, computer graphics, cartoon, childish, "
-    "watermark, logo, text, on screen text, subtitles, titles, signature, "
-    "hand deformities, finger deformities, unnatural facial expressions, "
-    "oversaturated colors, flickering, strobing, morphing, visual glitches, "
-    "blurry, low quality, low resolution, pixelated"
-)
-
 
 def _ensure_key():
     key = os.environ.get("FAL_KEY", "")
@@ -19,52 +10,67 @@ def _ensure_key():
 
 def submit_generation(
     english_prompt: str,
-    ref_character_url: str | None = None,
-    ref_video_url: str | None = None,
-    ref_audio_url: str | None = None,
-    duration: int = 5,
+    ref_image_urls: list[str] | None = None,
+    ref_video_urls: list[str] | None = None,
+    ref_audio_urls: list[str] | None = None,
+    end_image_url: str | None = None,
+    duration: str = "5",
     aspect_ratio: str = "16:9",
+    resolution: str = "720p",
+    generate_audio: bool = True,
     seed: int | None = None,
 ) -> dict:
     _ensure_key()
 
-    # Model selection: video ref → reference-to-video (supports image too)
-    #                  image only → image-to-video
-    #                  text only  → text-to-video
-    if ref_video_url:
+    has_videos = ref_video_urls and len(ref_video_urls) > 0
+    has_images = ref_image_urls and len(ref_image_urls) > 0
+    has_audio = ref_audio_urls and len(ref_audio_urls) > 0
+
+    # ── Model selection ───────────────────────────────────────
+    # reference-to-video: accepts lists of images, videos, audio
+    # image-to-video: single image_url + optional end_image_url
+    # text-to-video: prompt only
+
+    if has_videos or has_audio:
+        # reference-to-video accepts all reference types as lists
         model = "bytedance/seedance-2.0/fast/reference-to-video"
         arguments = {
             "prompt": english_prompt,
-            "reference_video_url": ref_video_url,
-            "duration": str(duration),
+            "duration": duration,
             "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
+            "generate_audio": generate_audio,
         }
-        if ref_character_url:
-            arguments["image_url"] = ref_character_url
-    elif ref_character_url:
+        if has_video_urls := ref_video_urls:
+            arguments["video_urls"] = has_video_urls
+        if has_images:
+            arguments["image_urls"] = ref_image_urls
+        if has_audio:
+            arguments["audio_urls"] = ref_audio_urls
+
+    elif has_images:
         model = "bytedance/seedance-2.0/fast/image-to-video"
         arguments = {
             "prompt": english_prompt,
-            "image_url": ref_character_url,
-            "duration": str(duration),
+            "image_url": ref_image_urls[0],
+            "duration": duration,
             "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
+            "generate_audio": generate_audio,
         }
+        if end_image_url:
+            arguments["end_image_url"] = end_image_url
+
     else:
         model = "bytedance/seedance-2.0/fast/text-to-video"
         arguments = {
             "prompt": english_prompt,
-            "duration": str(duration),
+            "duration": duration,
             "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
+            "generate_audio": generate_audio,
         }
 
-    # Add negative prompt
-    arguments["negative_prompt"] = NEGATIVE_PROMPT
-
-    # Add audio reference if provided
-    if ref_audio_url:
-        arguments["audio_url"] = ref_audio_url
-
-    # Add seed for reproducibility
     if seed is not None:
         arguments["seed"] = seed
 

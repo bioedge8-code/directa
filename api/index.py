@@ -86,6 +86,8 @@ class GenerateRequest(BaseModel):
     arabic_prompt: str
     references: list = []
     duration: str = "5"
+    aspect_ratio: str = "16:9"
+    resolution: str = "720p"
 
 @app.post("/api/generate")
 async def api_generate(req: GenerateRequest):
@@ -100,25 +102,35 @@ async def api_generate(req: GenerateRequest):
         references=req.references,
     )
 
-    # Extract reference URLs by purpose
-    ref_char_url = None
-    ref_video_url = None
-    ref_audio_url = None
+    # Collect reference URLs as lists (reference-to-video accepts arrays)
+    image_types = ("png", "jpg", "jpeg", "webp")
+    video_types = ("mp4", "mov", "webm")
+    audio_types = ("mp3", "wav", "m4a")
+
+    ref_image_urls = []
+    ref_video_urls = []
+    ref_audio_urls = []
     for ref in req.references:
-        if ref.get("purpose") == "character" and ref.get("file_type") in ("png", "jpg", "jpeg", "webp"):
-            ref_char_url = ref.get("url")
-        if ref.get("purpose") == "camera" and ref.get("file_type") in ("mp4", "mov", "webm"):
-            ref_video_url = ref.get("url")
-        if ref.get("purpose") == "audio" and ref.get("file_type") in ("mp3", "wav", "m4a", "mp4"):
-            ref_audio_url = ref.get("url")
+        url = ref.get("url")
+        ft = ref.get("file_type", "")
+        if not url:
+            continue
+        if ft in image_types:
+            ref_image_urls.append(url)
+        elif ft in video_types:
+            ref_video_urls.append(url)
+        elif ft in audio_types:
+            ref_audio_urls.append(url)
 
     try:
         fal_result = submit_generation(
             english_prompt=req.english_prompt,
-            ref_character_url=ref_char_url,
-            ref_video_url=ref_video_url,
-            ref_audio_url=ref_audio_url,
-            duration=int(req.duration),
+            ref_image_urls=ref_image_urls or None,
+            ref_video_urls=ref_video_urls or None,
+            ref_audio_urls=ref_audio_urls or None,
+            duration=req.duration,
+            aspect_ratio=req.aspect_ratio,
+            resolution=req.resolution,
         )
         update_generation(generation_id, {
             "status": "processing",
