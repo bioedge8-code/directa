@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Directa — صانع الفيديو بالذكاء الاصطناعي</title>
+  <link rel="stylesheet" href="/style.css">
+  <meta name="theme-color" content="#080808">
+</head>
+<body>
+
+  <div id="progress-bar" style="width: 0%"></div>
+
+  <div id="wizard-view">
+    <div class="header">
+      <span class="logo">Directa</span>
+      <a href="#" class="history-link" id="history-link">📋 مشاريعي</a>
+    </div>
+
+    <div class="step-counter" id="step-counter"></div>
+
+    <div class="wizard-container">
+      <div id="wizard-content"></div>
+
+      <div class="nav-buttons" id="nav-buttons">
+        <button class="nav-btn back hidden" id="btn-back">رجوع</button>
+        <button class="nav-btn next" id="btn-next" disabled>التالي</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wizard-container">
+    <div class="history-panel" id="history-panel"></div>
+  </div>
+
+  <script src="/wizard.js"></script>
+</body>
+</html>
