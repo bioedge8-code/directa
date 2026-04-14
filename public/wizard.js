@@ -380,6 +380,66 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
   card.appendChild(skip);
 }
 
+function addYouTubeInput(card, refField) {
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'margin-top:12px;display:flex;gap:8px;align-items:center;';
+
+  const input = document.createElement('input');
+  input.className = 'text-input';
+  input.placeholder = 'أو الصق رابط يوتيوب هنا...';
+  input.dir = 'ltr';
+  input.style.flex = '1';
+
+  const btn = document.createElement('button');
+  btn.className = 'nav-btn next';
+  btn.style.cssText = 'flex:none;padding:10px 16px;font-size:0.8rem;';
+  btn.textContent = 'جلب';
+  btn.disabled = true;
+
+  input.addEventListener('input', () => {
+    const v = input.value.trim();
+    btn.disabled = !(v.includes('youtube.com/') || v.includes('youtu.be/'));
+  });
+
+  btn.addEventListener('click', async () => {
+    const url = input.value.trim();
+    btn.disabled = true;
+    btn.textContent = 'جاري التحميل...';
+    input.disabled = true;
+
+    try {
+      const result = await api('/api/youtube-reference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, session_id: SESSION_ID, purpose: refField.replace('ref_', '') }),
+      });
+
+      if (!wizardData[refField]) wizardData[refField] = {};
+      wizardData[refField].url = result.url;
+      wizardData[refField].file_type = result.file_type;
+      saveState();
+
+      btn.textContent = '✓ تم';
+      btn.style.background = '#2d6a4f';
+      input.style.borderColor = '#2d6a4f';
+    } catch (err) {
+      btn.textContent = 'جلب';
+      btn.disabled = false;
+      input.disabled = false;
+      const msg = err.message || '';
+      if (msg.includes('15')) {
+        alert('الفيديو أطول من 15 ثانية. اختر مقطع أقصر.');
+      } else {
+        alert('فشل جلب الفيديو: ' + msg);
+      }
+    }
+  });
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(btn);
+  card.appendChild(wrapper);
+}
+
 function addChipGrid(card, options, field) {
   const grid = document.createElement('div');
   grid.className = 'chip-grid';
@@ -468,8 +528,9 @@ function renderStep5(card) {
 }
 
 function renderStep6(card) {
-  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'كليب قصير من إعلان أو فيلم يوضح الحركة التي تريدها');
+  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'ارفع ملف أو الصق رابط يوتيوب (15 ثانية كحد أقصى)');
   addUploadZone(card, 'camera', '🎥', 'ارفع فيديو مرجع حركة الكاميرا', 'MP4 / MOV / WEBM — الحد الأقصى 50MB', 'video/mp4,video/quicktime,video/webm', 'ref_camera');
+  addYouTubeInput(card, 'ref_camera');
 }
 
 function renderStep7(card) {
