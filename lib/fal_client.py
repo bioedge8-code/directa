@@ -17,14 +17,14 @@ def submit_generation(english_prompt: str, ref_character_url: str | None = None,
         arguments = {
             "prompt": english_prompt,
             "image_url": ref_character_url,
-            "duration": duration,
+            "duration": str(duration),
             "aspect_ratio": aspect_ratio,
         }
     else:
         model = "bytedance/seedance-2.0/fast/text-to-video"
         arguments = {
             "prompt": english_prompt,
-            "duration": duration,
+            "duration": str(duration),
             "aspect_ratio": aspect_ratio,
         }
 
