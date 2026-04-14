@@ -99,17 +99,20 @@ async def api_generate(req: GenerateRequest):
         references=req.references,
     )
 
-    # Determine if we have a character reference image for image-to-video
+    # Extract reference URLs by purpose
     ref_char_url = None
+    ref_audio_url = None
     for ref in req.references:
         if ref.get("purpose") == "character" and ref.get("file_type") in ("png", "jpg", "jpeg", "webp"):
             ref_char_url = ref.get("url")
-            break
+        if ref.get("purpose") == "audio" and ref.get("file_type") in ("mp3", "wav", "m4a", "mp4"):
+            ref_audio_url = ref.get("url")
 
     try:
         fal_result = submit_generation(
             english_prompt=req.english_prompt,
             ref_character_url=ref_char_url,
+            ref_audio_url=ref_audio_url,
         )
         update_generation(generation_id, {
             "status": "processing",

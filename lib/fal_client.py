@@ -9,6 +9,7 @@ def _ensure_key():
 
 
 def submit_generation(english_prompt: str, ref_character_url: str | None = None,
+                      ref_audio_url: str | None = None,
                       duration: int = 5, aspect_ratio: str = "16:9") -> dict:
     _ensure_key()
 
@@ -27,6 +28,10 @@ def submit_generation(english_prompt: str, ref_character_url: str | None = None,
             "duration": str(duration),
             "aspect_ratio": aspect_ratio,
         }
+
+    # Add audio reference if provided
+    if ref_audio_url:
+        arguments["audio_url"] = ref_audio_url
 
     handler = fal_client.submit(model, arguments=arguments)
 

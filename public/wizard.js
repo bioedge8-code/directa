@@ -12,6 +12,8 @@ const wizardData = (saved && saved.data) || {
   mood: null,
   subject: '',
   environment: '',
+  action: '',
+  scene_feel: '',
   ref_character: null,
   ref_lighting: null,
   ref_camera: null,
@@ -406,9 +408,11 @@ function renderStep2(card) {
 }
 
 function renderStep3(card) {
-  addQuestion(card, 'صف الموضوع الرئيسي والمكان', 'الموضوع هو محور الكاميرا — المكان هو عالم المشهد');
-  addTextInput(card, 'subject', 'الموضوع الرئيسي', 'مثال: زجاجة عطر سوداء فاخرة، شاب بملابس رياضية، كوب قهوة...');
+  addQuestion(card, 'صف المشهد بالكامل', 'الموضوع + المكان + الحركة + الإحساس = تعليمات إخراج حقيقية');
+  addTextInput(card, 'subject', 'الموضوع الرئيسي', 'مثال: زجاجة عطر سوداء فاخرة، شاب بملابس سوداء، كوب قهوة...');
   addTextInput(card, 'environment', 'البيئة والمكان', 'مثال: سطح رخامي أسود، مقهى عصري، شارع ممطر ليلاً...');
+  addTextInput(card, 'action', 'الحركة داخل المشهد', 'مثال: يمشي بثقة، يد تمسك المنتج وتفتحه، دخان يتصاعد خلف الزجاجة...');
+  addTextInput(card, 'scene_feel', 'الإحساس النهائي للمشهد', 'مثال: إحساس إعلان عطر فاخر، أجواء فيلم جريمة حديث، طاقة براند رياضي...');
 }
 
 function renderStep4(card) {
