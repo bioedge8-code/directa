@@ -39,7 +39,7 @@ def upload_reference(file_bytes: bytes, filename: str, content_type: str,
     path = f"{session_id}/{purpose}/{ts}_{safe_name}"
     client.storage.from_(bucket).upload(
         path, file_bytes,
-        file_options={"content-type": content_type, "upsert": True}
+        file_options={"content-type": content_type, "x-upsert": "true"}
     )
     public_url = client.storage.from_(bucket).get_public_url(path)
     return public_url
