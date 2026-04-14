@@ -427,15 +427,15 @@ function renderStep8(card) {
 
   addSectionLabel(card, 'حركة الكاميرا');
   addOptionGrid(card, [
-    ['🔍 Dolly-in بطيء', 'slow_dolly_in'],
-    ['🔄 Orbit حول الموضوع', 'orbit'],
-    ['📷 ثابتة Static', 'static'],
-    ['🎥 Tracking من الخلف', 'tracking_shot'],
-    ['↕️ Low Angle Hero', 'low_angle_hero'],
-    ['🎥 Handheld ناعمة', 'handheld_cinematic'],
-    ['🔭 Push-in Reveal', 'push_in_reveal'],
-    ['⬆️ Top-down', 'top_down'],
-    ['🎯 Rack Focus', 'rack_focus'],
+    ['🔍 اقتراب بطيء — Dolly-in', 'slow_dolly_in'],
+    ['🔄 دوران حول الموضوع — Orbit', 'orbit'],
+    ['📷 ثابتة — Static', 'static'],
+    ['🎥 تتبع من الخلف — Tracking', 'tracking_shot'],
+    ['↕️ زاوية منخفضة — Low Angle', 'low_angle_hero'],
+    ['🎥 محمولة سينمائية — Handheld', 'handheld_cinematic'],
+    ['🔭 اقتراب كاشف — Push-in', 'push_in_reveal'],
+    ['⬆️ من الأعلى — Top-down', 'top_down'],
+    ['🎯 تغيير بؤري — Rack Focus', 'rack_focus'],
   ], 'camera_movement');
 }
 
@@ -444,12 +444,12 @@ function renderStep9(card) {
 
   addSectionLabel(card, 'نوع اللقطة');
   addOptionGrid(card, [
-    ['🌍 Wide Shot', 'wide'],
-    ['🧍 Full Shot', 'full'],
-    ['👤 Medium Shot', 'medium'],
-    ['🔍 Close-up', 'closeup'],
-    ['🔬 Macro / Extreme Close-up', 'macro'],
-    ['🎬 Wide ثم Close-up', 'wide_to_close'],
+    ['🌍 لقطة واسعة — Wide', 'wide'],
+    ['🧍 لقطة كاملة — Full', 'full'],
+    ['👤 لقطة متوسطة — Medium', 'medium'],
+    ['🔍 لقطة قريبة — Close-up', 'closeup'],
+    ['🔬 ماكرو — Extreme Close-up', 'macro'],
+    ['🎬 من واسعة لقريبة — Wide to Close', 'wide_to_close'],
   ], 'shot_type');
 
   addSectionLabel(card, 'عمق الميدان');
@@ -468,7 +468,7 @@ function renderStep9(card) {
 }
 
 function renderStep10(card) {
-  addQuestion(card, 'ما الثابت؟ وما الممنوع؟', 'الثوابت هي DNA المشهد — المحظورات ترفع الجودة');
+  addQuestion(card, 'ما الذي يجب أن يبقى ثابتاً؟', 'الثوابت هي DNA المشهد — اختر العناصر التي لا يجب أن تتغير');
 
   addSectionLabel(card, 'يجب أن يثبت');
   addChipGrid(card, [
@@ -482,21 +482,7 @@ function renderStep10(card) {
     ['النبرة العامة', 'tone'],
   ], 'fixed_elements');
 
-  addSectionLabel(card, 'يجب تجنبه');
-  addChipGrid(card, [
-    ['تشوهات الأيدي', 'hand_deformities'],
-    ['تعابير وجه غريبة', 'weird_expressions'],
-    ['حركة كاميرا عدوانية', 'aggressive_camera'],
-    ['ألوان مشبعة جداً', 'oversaturated'],
-    ['خلفية مزدحمة', 'busy_background'],
-    ['نصوص مشوهة', 'distorted_text'],
-    ['حركات غير واقعية', 'unrealistic_motion'],
-    ['عناصر عشوائية', 'random_elements'],
-    ['وميض Flickering', 'flickering'],
-    ['مبالغة في المؤثرات', 'excessive_effects'],
-  ], 'avoid_elements');
-
-  addTextInput(card, 'avoid_extra', 'ملاحظات إضافية للتجنب', 'أي شيء آخر تريد تجنبه...', true);
+  addTextInput(card, 'avoid_extra', 'ملاحظات إضافية', 'أي تعليمات أو تفاصيل إضافية تريد إضافتها...', true);
 }
 
 // ── Step 11: Review ──────────────────────────────────────────

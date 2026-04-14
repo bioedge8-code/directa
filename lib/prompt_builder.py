@@ -214,7 +214,8 @@ def build_prompts(data: dict) -> dict:
     fixed_en_list = [FIXED_EN.get(f, f) for f in fixed_elements]
     fixed_en_str = ", ".join(fixed_en_list) if fixed_en_list else "overall visual consistency"
 
-    avoid_en_list = [AVOID_EN.get(a, a) for a in avoid_elements]
+    # Always include all avoid items in the prompt
+    avoid_en_list = list(AVOID_EN.values())
     if avoid_extra:
         avoid_en_list.append(avoid_extra)
     avoid_en_str = ", ".join(avoid_en_list) if avoid_en_list else "common AI artifacts"
@@ -260,10 +261,11 @@ def build_prompts(data: dict) -> dict:
     fixed_ar_list = [FIXED_AR.get(f, f) for f in fixed_elements]
     fixed_ar_str = "، ".join(fixed_ar_list) if fixed_ar_list else "التناسق البصري العام"
 
-    avoid_ar_list = [AVOID_AR.get(a, a) for a in avoid_elements]
+    # Always include all avoid items in the prompt
+    avoid_ar_list = list(AVOID_AR.values())
     if avoid_extra:
         avoid_ar_list.append(avoid_extra)
-    avoid_ar_str = "، ".join(avoid_ar_list) if avoid_ar_list else "عيوب الذكاء الاصطناعي الشائعة"
+    avoid_ar_str = "، ".join(avoid_ar_list)
 
     arabic_prompt = (
         f"فيديو {video_type_ar} يعرض {subject} في {environment}.\n\n"

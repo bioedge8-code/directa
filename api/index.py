@@ -114,6 +114,7 @@ async def api_generate(req: GenerateRequest):
         update_generation(generation_id, {
             "status": "processing",
             "fal_request_id": fal_result["request_id"],
+            "thumbnail_url": fal_result["model"],
         })
     except Exception as e:
         update_generation(generation_id, {
@@ -147,13 +148,15 @@ async def api_status(generation_id: str):
     if not fal_request_id:
         return {"status": gen["status"], "progress": 0}
 
-    # Determine model from wizard_data references
-    model = "fal-ai/seedance-1"
-    refs = gen.get("references") or []
-    for ref in refs:
-        if ref.get("purpose") == "character" and ref.get("file_type") in ("png", "jpg", "jpeg", "webp"):
-            model = "fal-ai/seedance-1/image-to-video"
-            break
+    # Use saved model, or determine from references
+    model = gen.get("thumbnail_url") or "bytedance/seedance-2.0/fast/text-to-video"
+    if model and not model.startswith("bytedance"):
+        model = "bytedance/seedance-2.0/fast/text-to-video"
+        refs = gen.get("references") or []
+        for ref in refs:
+            if ref.get("purpose") == "character" and ref.get("file_type") in ("png", "jpg", "jpeg", "webp"):
+                model = "bytedance/seedance-2.0/fast/image-to-video"
+                break
 
     result = check_status(model, fal_request_id)
 

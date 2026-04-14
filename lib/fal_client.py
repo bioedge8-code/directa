@@ -13,7 +13,7 @@ def submit_generation(english_prompt: str, ref_character_url: str | None = None,
     _ensure_key()
 
     if ref_character_url:
-        model = "fal-ai/seedance-1/image-to-video"
+        model = "bytedance/seedance-2.0/fast/image-to-video"
         arguments = {
             "prompt": english_prompt,
             "image_url": ref_character_url,
@@ -21,7 +21,7 @@ def submit_generation(english_prompt: str, ref_character_url: str | None = None,
             "aspect_ratio": aspect_ratio,
         }
     else:
-        model = "fal-ai/seedance-1"
+        model = "bytedance/seedance-2.0/fast/text-to-video"
         arguments = {
             "prompt": english_prompt,
             "duration": duration,
