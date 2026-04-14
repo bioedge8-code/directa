@@ -1,6 +1,15 @@
 import os
 import fal_client
 
+# Negative prompt — always sent to block common AI artifacts
+NEGATIVE_PROMPT = (
+    "news broadcast, 3d animation, computer graphics, cartoon, childish, "
+    "watermark, logo, text, on screen text, subtitles, titles, signature, "
+    "hand deformities, finger deformities, unnatural facial expressions, "
+    "oversaturated colors, flickering, strobing, morphing, visual glitches, "
+    "blurry, low quality, low resolution, pixelated"
+)
+
 
 def _ensure_key():
     key = os.environ.get("FAL_KEY", "")
@@ -8,12 +17,27 @@ def _ensure_key():
         os.environ["FAL_KEY"] = key
 
 
-def submit_generation(english_prompt: str, ref_character_url: str | None = None,
-                      ref_audio_url: str | None = None,
-                      duration: int = 5, aspect_ratio: str = "16:9") -> dict:
+def submit_generation(
+    english_prompt: str,
+    ref_character_url: str | None = None,
+    ref_video_url: str | None = None,
+    ref_audio_url: str | None = None,
+    duration: int = 5,
+    aspect_ratio: str = "16:9",
+    seed: int | None = None,
+) -> dict:
     _ensure_key()
 
-    if ref_character_url:
+    # Model selection priority: video ref > image ref > text only
+    if ref_video_url and not ref_character_url:
+        model = "bytedance/seedance-2.0/fast/reference-to-video"
+        arguments = {
+            "prompt": english_prompt,
+            "reference_video_url": ref_video_url,
+            "duration": str(duration),
+            "aspect_ratio": aspect_ratio,
+        }
+    elif ref_character_url:
         model = "bytedance/seedance-2.0/fast/image-to-video"
         arguments = {
             "prompt": english_prompt,
@@ -29,9 +53,16 @@ def submit_generation(english_prompt: str, ref_character_url: str | None = None,
             "aspect_ratio": aspect_ratio,
         }
 
+    # Add negative prompt
+    arguments["negative_prompt"] = NEGATIVE_PROMPT
+
     # Add audio reference if provided
     if ref_audio_url:
         arguments["audio_url"] = ref_audio_url
+
+    # Add seed for reproducibility
+    if seed is not None:
+        arguments["seed"] = seed
 
     handler = fal_client.submit(model, arguments=arguments)
 

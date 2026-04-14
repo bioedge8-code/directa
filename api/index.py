@@ -102,10 +102,13 @@ async def api_generate(req: GenerateRequest):
 
     # Extract reference URLs by purpose
     ref_char_url = None
+    ref_video_url = None
     ref_audio_url = None
     for ref in req.references:
         if ref.get("purpose") == "character" and ref.get("file_type") in ("png", "jpg", "jpeg", "webp"):
             ref_char_url = ref.get("url")
+        if ref.get("purpose") == "camera" and ref.get("file_type") in ("mp4", "mov", "webm"):
+            ref_video_url = ref.get("url")
         if ref.get("purpose") == "audio" and ref.get("file_type") in ("mp3", "wav", "m4a", "mp4"):
             ref_audio_url = ref.get("url")
 
@@ -113,6 +116,7 @@ async def api_generate(req: GenerateRequest):
         fal_result = submit_generation(
             english_prompt=req.english_prompt,
             ref_character_url=ref_char_url,
+            ref_video_url=ref_video_url,
             ref_audio_url=ref_audio_url,
             duration=int(req.duration),
         )
