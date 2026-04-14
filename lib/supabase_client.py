@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from datetime import datetime
 from supabase import create_client, Client
@@ -19,15 +20,26 @@ def get_bucket() -> str:
     return os.environ.get("SUPABASE_STORAGE_BUCKET", "references")
 
 
+def _safe_filename(filename: str) -> str:
+    name, _, ext = filename.rpartition(".")
+    if not name:
+        name = filename
+        ext = ""
+    # Keep only ASCII alphanumeric, dashes, underscores
+    name = re.sub(r'[^a-zA-Z0-9_-]', '', name) or "file"
+    return f"{name}.{ext}" if ext else name
+
+
 def upload_reference(file_bytes: bytes, filename: str, content_type: str,
                      session_id: str, purpose: str) -> str:
     client = get_client()
     bucket = get_bucket()
     ts = int(datetime.utcnow().timestamp())
-    path = f"{session_id}/{purpose}/{ts}_{filename}"
+    safe_name = _safe_filename(filename)
+    path = f"{session_id}/{purpose}/{ts}_{safe_name}"
     client.storage.from_(bucket).upload(
         path, file_bytes,
-        file_options={"content-type": content_type, "upsert": "true"}
+        file_options={"content-type": content_type, "upsert": True}
     )
     public_url = client.storage.from_(bucket).get_public_url(path)
     return public_url
