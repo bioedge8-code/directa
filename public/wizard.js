@@ -386,7 +386,7 @@ function addVideoUrlInput(card, refField) {
 
   const input = document.createElement('input');
   input.className = 'text-input';
-  input.placeholder = 'أو الصق رابط فيديو مباشر (MP4, WebM)...';
+  input.placeholder = 'الصق رابط يوتيوب أو رابط فيديو مباشر...';
   input.dir = 'ltr';
   input.style.flex = '1';
 
@@ -523,7 +523,7 @@ function renderStep5(card) {
 }
 
 function renderStep6(card) {
-  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'ارفع ملف أو الصق رابط فيديو مباشر (MP4)');
+  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'ارفع ملف أو الصق رابط يوتيوب (15 ثانية كحد أقصى)');
   addUploadZone(card, 'camera', '🎥', 'ارفع فيديو مرجع حركة الكاميرا', 'MP4 / MOV / WEBM — الحد الأقصى 50MB', 'video/mp4,video/quicktime,video/webm', 'ref_camera');
   addVideoUrlInput(card, 'ref_camera');
 }

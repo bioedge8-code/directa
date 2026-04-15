@@ -62,57 +62,88 @@ async def api_upload_reference(
     return {"url": url, "purpose": purpose, "file_type": ext}
 
 
-# ── URL Reference (direct video URL) ─────────────────────────
+# ── Video URL Reference (YouTube + direct URLs) ──────────────
 
 class URLRefRequest(BaseModel):
     url: str
     session_id: str
     purpose: str = "camera"
 
-@app.post("/api/url-reference")
-async def api_url_reference(req: URLRefRequest):
-    import httpx
 
-    # Download the file via HTTP
+def _is_youtube(url: str) -> bool:
+    return "youtube.com/" in url or "youtu.be/" in url
+
+
+async def _resolve_youtube_url(youtube_url: str) -> str:
+    """Use cobalt API to get direct download URL from YouTube."""
+    import httpx
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-            resp = await client.get(req.url)
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                "https://api.cobalt.tools/",
+                json={"url": youtube_url, "videoQuality": "480"},
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+            )
+            data = resp.json()
+
+            if data.get("status") in ("redirect", "stream", "tunnel"):
+                return data.get("url", "")
+
+            error = data.get("text", data.get("error", {}).get("code", ""))
+            raise HTTPException(400, f"فشل جلب الفيديو من يوتيوب: {error}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, f"خدمة تحميل اليوتيوب غير متاحة: {str(e)[:80]}")
+
+
+async def _download_video(url: str) -> tuple[bytes, str]:
+    """Download video bytes and detect extension."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=45) as client:
+            resp = await client.get(url)
             resp.raise_for_status()
     except Exception as e:
-        raise HTTPException(400, f"فشل تحميل الرابط: {str(e)[:100]}")
+        raise HTTPException(400, f"فشل تحميل الفيديو: {str(e)[:100]}")
 
     video_bytes = resp.content
 
-    # Max 50MB
     if len(video_bytes) > 50 * 1024 * 1024:
         raise HTTPException(400, "الملف كبير جداً. الحد الأقصى 50MB.")
+    if len(video_bytes) < 500:
+        raise HTTPException(400, "الملف صغير جداً أو فارغ")
 
-    # Detect file type from URL extension or content-type
-    ct = resp.headers.get("content-type", "").lower()
-    url_lower = req.url.lower().split("?")[0]
-
-    ext = "mp4"
-    if url_lower.endswith(".webm") or "webm" in ct:
-        ext = "webm"
-    elif url_lower.endswith(".mov") or "quicktime" in ct:
-        ext = "mov"
-    elif url_lower.endswith(".mp4") or "mp4" in ct:
-        ext = "mp4"
-
-    # Validate: check magic bytes to ensure it's a real video file
-    # MP4/MOV start with 'ftyp' at byte 4, WebM starts with 0x1A45DFA3
+    # Validate magic bytes
     head = video_bytes[:12]
     is_mp4 = b'ftyp' in head
     is_webm = head[:4] == b'\x1a\x45\xdf\xa3'
-    is_avi = head[:4] == b'RIFF' and b'AVI' in head[:12]
 
-    if not (is_mp4 or is_webm or is_avi):
-        # Check if it's HTML (common mistake)
+    if not (is_mp4 or is_webm):
         if video_bytes[:100].lstrip().startswith((b'<', b'<!', b'{', b'[')):
-            raise HTTPException(400, "الرابط يشير إلى صفحة ويب وليس ملف فيديو مباشر. استخدم رابط ينتهي بـ .mp4")
-        raise HTTPException(400, "الملف ليس بتنسيق فيديو مدعوم (MP4/WebM/AVI)")
+            raise HTTPException(400, "الرابط يشير إلى صفحة ويب وليس ملف فيديو")
+        raise HTTPException(400, "الملف ليس بتنسيق فيديو مدعوم")
 
-    url = upload_reference(video_bytes, f"url_ref.{ext}", ct or "video/mp4",
+    ct = resp.headers.get("content-type", "").lower()
+    ext = "webm" if is_webm else "mp4"
+    return video_bytes, ext
+
+
+@app.post("/api/url-reference")
+async def api_url_reference(req: URLRefRequest):
+    # If YouTube URL → resolve to direct URL first
+    download_url = req.url
+    if _is_youtube(req.url):
+        download_url = await _resolve_youtube_url(req.url)
+        if not download_url:
+            raise HTTPException(400, "فشل استخراج رابط الفيديو من يوتيوب")
+
+    video_bytes, ext = await _download_video(download_url)
+
+    url = upload_reference(video_bytes, f"url_ref.{ext}", f"video/{ext}",
                            req.session_id, req.purpose)
 
     return {"url": url, "purpose": req.purpose, "file_type": ext}
