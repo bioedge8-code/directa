@@ -254,6 +254,134 @@ function addTextInput(card, field, label, placeholder, isTextarea = false) {
   return input;
 }
 
+// ── Video Trimmer ────────────────────────────────────────────
+function showVideoTrimmer(file, duration) {
+  return new Promise((resolve) => {
+    const MAX_CLIP = 14;
+    const maxStart = Math.max(0, duration - MAX_CLIP);
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:24px;max-width:480px;width:100%;direction:rtl;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:1rem;font-weight:700;margin-bottom:12px;color:#f0f0f0;';
+    title.textContent = `الفيديو ${Math.round(duration)} ثانية — اختر مقطع ${MAX_CLIP} ثانية`;
+    box.appendChild(title);
+
+    // Video preview
+    const vid = document.createElement('video');
+    vid.src = URL.createObjectURL(file);
+    vid.style.cssText = 'width:100%;border-radius:8px;margin-bottom:12px;';
+    vid.muted = true;
+    vid.playsInline = true;
+    box.appendChild(vid);
+
+    // Slider
+    const sliderLabel = document.createElement('div');
+    sliderLabel.style.cssText = 'font-size:0.82rem;color:#888;margin-bottom:6px;';
+    sliderLabel.textContent = `البداية: 0:00`;
+    box.appendChild(sliderLabel);
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = String(maxStart);
+    slider.step = '0.5';
+    slider.value = '0';
+    slider.style.cssText = 'width:100%;accent-color:#C9A84C;margin-bottom:16px;';
+    box.appendChild(slider);
+
+    const formatTime = (s) => {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    slider.addEventListener('input', () => {
+      const start = parseFloat(slider.value);
+      sliderLabel.textContent = `البداية: ${formatTime(start)} → النهاية: ${formatTime(start + MAX_CLIP)}`;
+      vid.currentTime = start;
+    });
+
+    vid.addEventListener('loadedmetadata', () => {
+      vid.currentTime = 0;
+    });
+
+    // Buttons
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:10px;';
+
+    const trimBtn = document.createElement('button');
+    trimBtn.className = 'generate-btn';
+    trimBtn.style.marginTop = '0';
+    trimBtn.textContent = '✂️ قص ورفع';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'nav-btn back';
+    cancelBtn.textContent = 'إلغاء';
+
+    btns.appendChild(trimBtn);
+    btns.appendChild(cancelBtn);
+    box.appendChild(btns);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    cancelBtn.addEventListener('click', () => {
+      URL.revokeObjectURL(vid.src);
+      overlay.remove();
+      resolve(null);
+    });
+
+    trimBtn.addEventListener('click', async () => {
+      const startTime = parseFloat(slider.value);
+      trimBtn.disabled = true;
+      trimBtn.textContent = 'جاري القص...';
+
+      try {
+        // Use captureStream + MediaRecorder to trim
+        vid.currentTime = startTime;
+        vid.muted = false;
+        await new Promise(r => { vid.onseeked = r; });
+
+        const stream = vid.captureStream ? vid.captureStream() : vid.mozCaptureStream();
+        const chunks = [];
+        const recorder = new MediaRecorder(stream, {
+          mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm'
+        });
+
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+        const done = new Promise((res) => { recorder.onstop = res; });
+
+        vid.play();
+        recorder.start();
+
+        // Stop after MAX_CLIP seconds
+        setTimeout(() => {
+          recorder.stop();
+          vid.pause();
+        }, MAX_CLIP * 1000);
+
+        await done;
+
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        URL.revokeObjectURL(vid.src);
+        overlay.remove();
+        resolve(blob);
+
+      } catch (err) {
+        trimBtn.disabled = false;
+        trimBtn.textContent = '✂️ قص ورفع';
+        alert('فشل القص: ' + err.message);
+      }
+    });
+  });
+}
+
 function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField) {
   const zone = document.createElement('div');
   zone.className = 'upload-zone';
@@ -286,18 +414,46 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
     const file = fileInput.files[0];
     if (!file) return;
 
-    // Check video duration before uploading (max 14s for references)
+    // Check video duration — if too long, open trimmer
     if (file.type.startsWith('video/')) {
       try {
         const dur = await new Promise((resolve, reject) => {
           const vid = document.createElement('video');
           vid.preload = 'metadata';
-          vid.onloadedmetadata = () => { URL.revokeObjectURL(vid.src); resolve(vid.duration); };
+          vid.onloadedmetadata = () => resolve(vid.duration);
           vid.onerror = () => reject();
           vid.src = URL.createObjectURL(file);
         });
         if (dur > 14.5) {
-          alert(`الفيديو مدته ${Math.round(dur)} ثانية. الحد الأقصى 14 ثانية. قصّ الفيديو قبل الرفع.`);
+          const trimmedFile = await showVideoTrimmer(file, dur);
+          if (!trimmedFile) return; // user cancelled
+          // Replace file with trimmed version for upload
+          fileInput = null; // prevent re-read
+          const formData = new FormData();
+          formData.append('file', trimmedFile, 'trimmed.webm');
+          formData.append('purpose', purpose);
+          formData.append('session_id', SESSION_ID);
+          zone.classList.add('uploading');
+          const spinner = zone.querySelector(`#spinner-${purpose}`);
+          spinner.classList.add('visible');
+          try {
+            const result = await api('/api/upload-reference', { method: 'POST', body: formData });
+            spinner.classList.remove('visible');
+            zone.classList.remove('uploading');
+            zone.classList.add('uploaded');
+            const preview = zone.querySelector(`#preview-${purpose}`);
+            preview.classList.add('visible');
+            zone.querySelector(`#fname-${purpose}`).textContent = 'مقطع مقصوص';
+            zone.querySelector(`#thumb-${purpose}`).style.display = 'none';
+            if (!wizardData[refField]) wizardData[refField] = {};
+            wizardData[refField].url = result.url;
+            wizardData[refField].file_type = result.file_type;
+            saveState();
+          } catch (err) {
+            spinner.classList.remove('visible');
+            zone.classList.remove('uploading');
+            alert('فشل الرفع: ' + err.message);
+          }
           return;
         }
       } catch(e) { /* ignore — upload anyway */ }
