@@ -62,55 +62,6 @@ async def api_upload_reference(
     return {"url": url, "purpose": purpose, "file_type": ext}
 
 
-# ── Video URL Reference ───────────────────────────────────────
-
-class URLRefRequest(BaseModel):
-    url: str
-    session_id: str
-    purpose: str = "camera"
-
-@app.post("/api/url-reference")
-async def api_url_reference(req: URLRefRequest):
-    import httpx
-
-    # Reject YouTube URLs — can't download directly
-    url_lower = req.url.lower()
-    if "youtube.com/" in url_lower or "youtu.be/" in url_lower:
-        raise HTTPException(400, "YOUTUBE")
-
-    # Download direct video URL
-    try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=45) as client:
-            resp = await client.get(req.url)
-            resp.raise_for_status()
-    except Exception as e:
-        raise HTTPException(400, f"فشل تحميل الفيديو: {str(e)[:100]}")
-
-    video_bytes = resp.content
-
-    if len(video_bytes) > 50 * 1024 * 1024:
-        raise HTTPException(400, "الملف كبير جداً. الحد الأقصى 50MB.")
-    if len(video_bytes) < 500:
-        raise HTTPException(400, "الملف صغير جداً أو فارغ")
-
-    # Validate magic bytes
-    head = video_bytes[:12]
-    is_mp4 = b'ftyp' in head
-    is_webm = head[:4] == b'\x1a\x45\xdf\xa3'
-
-    if not (is_mp4 or is_webm):
-        if video_bytes[:100].lstrip().startswith((b'<', b'<!', b'{', b'[')):
-            raise HTTPException(400, "الرابط يشير إلى صفحة ويب وليس ملف فيديو مباشر")
-        raise HTTPException(400, "الملف ليس بتنسيق فيديو مدعوم (MP4/WebM)")
-
-    ext = "webm" if is_webm else "mp4"
-
-    url = upload_reference(video_bytes, f"url_ref.{ext}", f"video/{ext}",
-                           req.session_id, req.purpose)
-
-    return {"url": url, "purpose": req.purpose, "file_type": ext}
-
-
 # ── Build Prompt ─────────────────────────────────────────────
 
 class BuildPromptRequest(BaseModel):

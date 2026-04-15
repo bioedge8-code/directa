@@ -380,83 +380,6 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
   card.appendChild(skip);
 }
 
-function _isYouTubeUrl(url) {
-  return url.includes('youtube.com/') || url.includes('youtu.be/');
-}
-
-function addVideoUrlInput(card, refField) {
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'margin-top:12px;display:flex;gap:8px;align-items:center;';
-
-  const input = document.createElement('input');
-  input.className = 'text-input';
-  input.placeholder = 'الصق رابط فيديو مباشر (MP4)...';
-  input.dir = 'ltr';
-  input.style.flex = '1';
-
-  const btn = document.createElement('button');
-  btn.className = 'nav-btn next';
-  btn.style.cssText = 'flex:none;padding:10px 16px;font-size:0.8rem;';
-  btn.textContent = 'جلب';
-  btn.disabled = true;
-
-  // YouTube helper message
-  const ytMsg = document.createElement('div');
-  ytMsg.className = 'hidden';
-  ytMsg.style.cssText = 'margin-top:8px;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;font-size:0.78rem;line-height:1.6;color:#999;';
-  ytMsg.innerHTML = `
-    رابط يوتيوب لا يعمل مباشرة. قص المقطع وحمّله أولاً:<br>
-    1. افتح <a href="https://ytcutter.com" target="_blank" style="color:#C9A84C;">ytcutter.com</a><br>
-    2. الصق رابط اليوتيوب → حدد البداية والنهاية (15 ثانية كحد أقصى)<br>
-    3. حمّل MP4 وارفعه هنا بالزر أعلاه
-  `;
-
-  input.addEventListener('input', () => {
-    const v = input.value.trim();
-    if (_isYouTubeUrl(v)) {
-      ytMsg.classList.remove('hidden');
-      btn.disabled = true;
-    } else {
-      ytMsg.classList.add('hidden');
-      btn.disabled = !v.startsWith('http');
-    }
-  });
-
-  btn.addEventListener('click', async () => {
-    const url = input.value.trim();
-    btn.disabled = true;
-    btn.textContent = 'جاري التحميل...';
-    input.disabled = true;
-
-    try {
-      const result = await api('/api/url-reference', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, session_id: SESSION_ID, purpose: refField.replace('ref_', '') }),
-      });
-
-      if (!wizardData[refField]) wizardData[refField] = {};
-      wizardData[refField].url = result.url;
-      wizardData[refField].file_type = result.file_type;
-      saveState();
-
-      btn.textContent = '✓ تم';
-      btn.style.background = '#2d6a4f';
-      input.style.borderColor = '#2d6a4f';
-    } catch (err) {
-      btn.textContent = 'جلب';
-      btn.disabled = false;
-      input.disabled = false;
-      alert('فشل جلب الفيديو: ' + (err.message || 'خطأ غير معروف'));
-    }
-  });
-
-  wrapper.appendChild(input);
-  wrapper.appendChild(btn);
-  card.appendChild(wrapper);
-  card.appendChild(ytMsg);
-}
-
 function addChipGrid(card, options, field) {
   const grid = document.createElement('div');
   grid.className = 'chip-grid';
@@ -545,9 +468,8 @@ function renderStep5(card) {
 }
 
 function renderStep6(card) {
-  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'ارفع ملف أو الصق رابط يوتيوب (15 ثانية كحد أقصى)');
+  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'كليب قصير من إعلان أو فيلم يوضح الحركة التي تريدها');
   addUploadZone(card, 'camera', '🎥', 'ارفع فيديو مرجع حركة الكاميرا', 'MP4 / MOV / WEBM — الحد الأقصى 50MB', 'video/mp4,video/quicktime,video/webm', 'ref_camera');
-  addVideoUrlInput(card, 'ref_camera');
 }
 
 function renderStep7(card) {
