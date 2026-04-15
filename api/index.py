@@ -87,16 +87,25 @@ async def api_url_reference(req: URLRefRequest):
     if len(video_bytes) > 50 * 1024 * 1024:
         raise HTTPException(400, "الملف كبير جداً. الحد الأقصى 50MB.")
 
-    # Detect file type from content-type or URL
-    ct = resp.headers.get("content-type", "")
-    if "video" not in ct and "octet" not in ct:
-        raise HTTPException(400, "الرابط لا يشير إلى ملف فيديو")
+    # Detect file type from URL extension or content-type
+    ct = resp.headers.get("content-type", "").lower()
+    url_lower = req.url.lower().split("?")[0]
 
     ext = "mp4"
-    if "webm" in ct:
+    if url_lower.endswith(".webm") or "webm" in ct:
         ext = "webm"
-    elif "quicktime" in ct or "mov" in ct:
+    elif url_lower.endswith(".mov") or "quicktime" in ct:
         ext = "mov"
+    elif url_lower.endswith(".mp4") or "mp4" in ct:
+        ext = "mp4"
+
+    # Accept if content-type is video, octet-stream, or URL has video extension
+    video_exts = (".mp4", ".mov", ".webm", ".avi", ".mkv")
+    is_video_ct = any(t in ct for t in ("video", "octet-stream", "binary"))
+    is_video_url = any(url_lower.endswith(e) for e in video_exts)
+
+    if not is_video_ct and not is_video_url and len(video_bytes) < 1000:
+        raise HTTPException(400, "الرابط لا يشير إلى ملف فيديو")
 
     url = upload_reference(video_bytes, f"url_ref.{ext}", ct or "video/mp4",
                            req.session_id, req.purpose)
