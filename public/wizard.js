@@ -265,17 +265,17 @@ function showVideoTrimmer(file, duration) {
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
 
     const box = document.createElement('div');
-    box.style.cssText = 'background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:24px;max-width:480px;width:100%;direction:rtl;';
+    box.style.cssText = 'background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px;max-width:360px;width:100%;direction:rtl;';
 
     const title = document.createElement('div');
-    title.style.cssText = 'font-size:1rem;font-weight:700;margin-bottom:12px;color:#f0f0f0;';
+    title.style.cssText = 'font-size:0.88rem;font-weight:700;margin-bottom:10px;color:#f0f0f0;';
     title.textContent = `الفيديو ${Math.round(duration)} ثانية — اختر مقطع ${MAX_CLIP} ثانية`;
     box.appendChild(title);
 
     // Video preview
     const vid = document.createElement('video');
     vid.src = URL.createObjectURL(file);
-    vid.style.cssText = 'width:100%;border-radius:8px;margin-bottom:12px;';
+    vid.style.cssText = 'width:100%;max-height:240px;object-fit:contain;border-radius:8px;margin-bottom:12px;background:#000;';
     vid.muted = true;
     vid.playsInline = true;
     box.appendChild(vid);
