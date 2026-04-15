@@ -380,13 +380,13 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
   card.appendChild(skip);
 }
 
-function addYouTubeInput(card, refField) {
+function addVideoUrlInput(card, refField) {
   const wrapper = document.createElement('div');
   wrapper.style.cssText = 'margin-top:12px;display:flex;gap:8px;align-items:center;';
 
   const input = document.createElement('input');
   input.className = 'text-input';
-  input.placeholder = 'أو الصق رابط يوتيوب هنا...';
+  input.placeholder = 'أو الصق رابط فيديو مباشر (MP4, WebM)...';
   input.dir = 'ltr';
   input.style.flex = '1';
 
@@ -398,7 +398,7 @@ function addYouTubeInput(card, refField) {
 
   input.addEventListener('input', () => {
     const v = input.value.trim();
-    btn.disabled = !(v.includes('youtube.com/') || v.includes('youtu.be/'));
+    btn.disabled = !v.startsWith('http');
   });
 
   btn.addEventListener('click', async () => {
@@ -408,7 +408,7 @@ function addYouTubeInput(card, refField) {
     input.disabled = true;
 
     try {
-      const result = await api('/api/youtube-reference', {
+      const result = await api('/api/url-reference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, session_id: SESSION_ID, purpose: refField.replace('ref_', '') }),
@@ -426,12 +426,7 @@ function addYouTubeInput(card, refField) {
       btn.textContent = 'جلب';
       btn.disabled = false;
       input.disabled = false;
-      const msg = err.message || '';
-      if (msg.includes('15')) {
-        alert('الفيديو أطول من 15 ثانية. اختر مقطع أقصر.');
-      } else {
-        alert('فشل جلب الفيديو: ' + msg);
-      }
+      alert('فشل جلب الفيديو: ' + (err.message || 'خطأ غير معروف'));
     }
   });
 
@@ -528,9 +523,9 @@ function renderStep5(card) {
 }
 
 function renderStep6(card) {
-  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'ارفع ملف أو الصق رابط يوتيوب (15 ثانية كحد أقصى)');
+  addQuestion(card, 'هل عندك فيديو مرجعي لحركة الكاميرا؟', 'ارفع ملف أو الصق رابط فيديو مباشر (MP4)');
   addUploadZone(card, 'camera', '🎥', 'ارفع فيديو مرجع حركة الكاميرا', 'MP4 / MOV / WEBM — الحد الأقصى 50MB', 'video/mp4,video/quicktime,video/webm', 'ref_camera');
-  addYouTubeInput(card, 'ref_camera');
+  addVideoUrlInput(card, 'ref_camera');
 }
 
 function renderStep7(card) {

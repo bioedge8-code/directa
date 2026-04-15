@@ -62,68 +62,46 @@ async def api_upload_reference(
     return {"url": url, "purpose": purpose, "file_type": ext}
 
 
-# ── YouTube Reference ─────────────────────────────────────────
+# ── URL Reference (direct video URL) ─────────────────────────
 
-class YouTubeRequest(BaseModel):
+class URLRefRequest(BaseModel):
     url: str
     session_id: str
     purpose: str = "camera"
 
-@app.post("/api/youtube-reference")
-async def api_youtube_reference(req: YouTubeRequest):
-    import tempfile
-    import subprocess
-    from pytubefix import YouTube
+@app.post("/api/url-reference")
+async def api_url_reference(req: URLRefRequest):
+    import httpx
 
+    # Download the file via HTTP
     try:
-        yt = YouTube(req.url)
-    except Exception:
-        raise HTTPException(400, "رابط يوتيوب غير صالح")
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
+            resp = await client.get(req.url)
+            resp.raise_for_status()
+    except Exception as e:
+        raise HTTPException(400, f"فشل تحميل الرابط: {str(e)[:100]}")
 
-    # Get lowest resolution stream (fastest download)
-    stream = (
-        yt.streams
-        .filter(progressive=True, file_extension="mp4")
-        .order_by("resolution")
-        .first()
-    )
-    if not stream:
-        raise HTTPException(400, "لا يوجد stream متاح لهذا الفيديو")
+    video_bytes = resp.content
 
-    # Download full video to temp
-    dl_path = stream.download(output_path="/tmp", filename=f"yt_{req.session_id[:8]}.mp4")
-
-    # Trim to max 15 seconds using ffmpeg (save only the trimmed version)
-    trimmed_path = f"/tmp/yt_trimmed_{req.session_id[:8]}.mp4"
-    try:
-        subprocess.run(
-            ["ffmpeg", "-y", "-i", dl_path, "-t", "15", "-c", "copy", trimmed_path],
-            capture_output=True, timeout=30,
-        )
-        with open(trimmed_path, "rb") as f:
-            video_bytes = f.read()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        # ffmpeg not available — use full file but reject if too long
-        if yt.length and yt.length > 15:
-            raise HTTPException(400, f"الفيديو طويل ({yt.length}ث). الحد 15 ثانية. ثبّت ffmpeg أو اختر مقطع أقصر.")
-        with open(dl_path, "rb") as f:
-            video_bytes = f.read()
-    finally:
-        # Cleanup temp files
-        import os as _os
-        for p in (dl_path, trimmed_path):
-            try:
-                _os.remove(p)
-            except OSError:
-                pass
-
+    # Max 50MB
     if len(video_bytes) > 50 * 1024 * 1024:
-        raise HTTPException(400, "الملف كبير جداً بعد القص. الحد الأقصى 50MB.")
+        raise HTTPException(400, "الملف كبير جداً. الحد الأقصى 50MB.")
 
-    url = upload_reference(video_bytes, "yt_ref.mp4", "video/mp4",
+    # Detect file type from content-type or URL
+    ct = resp.headers.get("content-type", "")
+    if "video" not in ct and "octet" not in ct:
+        raise HTTPException(400, "الرابط لا يشير إلى ملف فيديو")
+
+    ext = "mp4"
+    if "webm" in ct:
+        ext = "webm"
+    elif "quicktime" in ct or "mov" in ct:
+        ext = "mov"
+
+    url = upload_reference(video_bytes, f"url_ref.{ext}", ct or "video/mp4",
                            req.session_id, req.purpose)
 
-    return {"url": url, "purpose": req.purpose, "file_type": "mp4"}
+    return {"url": url, "purpose": req.purpose, "file_type": ext}
 
 
 # ── Build Prompt ─────────────────────────────────────────────
