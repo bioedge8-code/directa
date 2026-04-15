@@ -42,7 +42,8 @@ def upload_reference(file_bytes: bytes, filename: str, content_type: str,
         file_options={"content-type": content_type, "x-upsert": "true"}
     )
     public_url = client.storage.from_(bucket).get_public_url(path)
-    return public_url
+    # Some Supabase SDK versions append trailing '?' — strip it
+    return public_url.rstrip("?")
 
 
 def create_generation(generation_id: str, session_id: str, wizard_data: dict,

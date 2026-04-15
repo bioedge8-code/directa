@@ -99,13 +99,18 @@ async def api_url_reference(req: URLRefRequest):
     elif url_lower.endswith(".mp4") or "mp4" in ct:
         ext = "mp4"
 
-    # Accept if content-type is video, octet-stream, or URL has video extension
-    video_exts = (".mp4", ".mov", ".webm", ".avi", ".mkv")
-    is_video_ct = any(t in ct for t in ("video", "octet-stream", "binary"))
-    is_video_url = any(url_lower.endswith(e) for e in video_exts)
+    # Validate: check magic bytes to ensure it's a real video file
+    # MP4/MOV start with 'ftyp' at byte 4, WebM starts with 0x1A45DFA3
+    head = video_bytes[:12]
+    is_mp4 = b'ftyp' in head
+    is_webm = head[:4] == b'\x1a\x45\xdf\xa3'
+    is_avi = head[:4] == b'RIFF' and b'AVI' in head[:12]
 
-    if not is_video_ct and not is_video_url and len(video_bytes) < 1000:
-        raise HTTPException(400, "الرابط لا يشير إلى ملف فيديو")
+    if not (is_mp4 or is_webm or is_avi):
+        # Check if it's HTML (common mistake)
+        if video_bytes[:100].lstrip().startswith((b'<', b'<!', b'{', b'[')):
+            raise HTTPException(400, "الرابط يشير إلى صفحة ويب وليس ملف فيديو مباشر. استخدم رابط ينتهي بـ .mp4")
+        raise HTTPException(400, "الملف ليس بتنسيق فيديو مدعوم (MP4/WebM/AVI)")
 
     url = upload_reference(video_bytes, f"url_ref.{ext}", ct or "video/mp4",
                            req.session_id, req.purpose)
