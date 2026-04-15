@@ -77,14 +77,23 @@ def _is_youtube(url: str) -> bool:
 async def _resolve_youtube_url(youtube_url: str) -> str:
     """Use cobalt API to get direct download URL from YouTube."""
     import httpx
+
+    cobalt_key = os.environ.get("COBALT_API_KEY", "")
+    if not cobalt_key:
+        raise HTTPException(400,
+            "لتحميل من يوتيوب، أضف COBALT_API_KEY في إعدادات Vercel. "
+            "احصل على مفتاح من cobalt.tools أو حمّل الفيديو يدوياً وارفعه كملف."
+        )
+
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=20) as client:
             resp = await client.post(
                 "https://api.cobalt.tools/",
                 json={"url": youtube_url, "videoQuality": "480"},
                 headers={
                     "Accept": "application/json",
                     "Content-Type": "application/json",
+                    "Authorization": f"Api-Key {cobalt_key}",
                 },
             )
             data = resp.json()
