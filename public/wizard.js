@@ -257,7 +257,7 @@ function addTextInput(card, field, label, placeholder, isTextarea = false) {
 // ── Video Trimmer ────────────────────────────────────────────
 function showVideoTrimmer(file, duration) {
   return new Promise((resolve) => {
-    const MAX_CLIP = 14;
+    const MAX_CLIP = 12;
     const maxStart = Math.max(0, duration - MAX_CLIP);
 
     // Overlay
@@ -424,7 +424,7 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
           vid.onerror = () => reject();
           vid.src = URL.createObjectURL(file);
         });
-        if (dur > 14.5) {
+        if (dur > 12.5) {
           const trimmedFile = await showVideoTrimmer(file, dur);
           if (!trimmedFile) return; // user cancelled
           // Replace file with trimmed version for upload
