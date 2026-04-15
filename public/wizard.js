@@ -286,6 +286,23 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
     const file = fileInput.files[0];
     if (!file) return;
 
+    // Check video duration before uploading (max 14s for references)
+    if (file.type.startsWith('video/')) {
+      try {
+        const dur = await new Promise((resolve, reject) => {
+          const vid = document.createElement('video');
+          vid.preload = 'metadata';
+          vid.onloadedmetadata = () => { URL.revokeObjectURL(vid.src); resolve(vid.duration); };
+          vid.onerror = () => reject();
+          vid.src = URL.createObjectURL(file);
+        });
+        if (dur > 14.5) {
+          alert(`الفيديو مدته ${Math.round(dur)} ثانية. الحد الأقصى 14 ثانية. قصّ الفيديو قبل الرفع.`);
+          return;
+        }
+      } catch(e) { /* ignore — upload anyway */ }
+    }
+
     zone.classList.add('uploading');
     zone.classList.remove('uploaded');
     const spinner = zone.querySelector(`#spinner-${purpose}`);
