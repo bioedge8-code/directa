@@ -537,7 +537,7 @@ function renderStep9(card) {
   addOptionGrid(card, [
     ['5 ثوانٍ', '5'],
     ['10 ثوانٍ', '10'],
-    ['15 ثانية', '15'],
+    ['14 ثانية', '14'],
   ], 'duration');
 
   addSectionLabel(card, 'أبعاد الفيديو');
