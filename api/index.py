@@ -62,59 +62,26 @@ async def api_upload_reference(
     return {"url": url, "purpose": purpose, "file_type": ext}
 
 
-# ── Video URL Reference (YouTube + direct URLs) ──────────────
+# ── Video URL Reference ───────────────────────────────────────
 
 class URLRefRequest(BaseModel):
     url: str
     session_id: str
     purpose: str = "camera"
 
-
-def _is_youtube(url: str) -> bool:
-    return "youtube.com/" in url or "youtu.be/" in url
-
-
-async def _resolve_youtube_url(youtube_url: str) -> str:
-    """Use cobalt API to get direct download URL from YouTube."""
+@app.post("/api/url-reference")
+async def api_url_reference(req: URLRefRequest):
     import httpx
 
-    cobalt_key = os.environ.get("COBALT_API_KEY", "")
-    if not cobalt_key:
-        raise HTTPException(400,
-            "لتحميل من يوتيوب، أضف COBALT_API_KEY في إعدادات Vercel. "
-            "احصل على مفتاح من cobalt.tools أو حمّل الفيديو يدوياً وارفعه كملف."
-        )
+    # Reject YouTube URLs — can't download directly
+    url_lower = req.url.lower()
+    if "youtube.com/" in url_lower or "youtu.be/" in url_lower:
+        raise HTTPException(400, "YOUTUBE")
 
-    try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.post(
-                "https://api.cobalt.tools/",
-                json={"url": youtube_url, "videoQuality": "480"},
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "Authorization": f"Api-Key {cobalt_key}",
-                },
-            )
-            data = resp.json()
-
-            if data.get("status") in ("redirect", "stream", "tunnel"):
-                return data.get("url", "")
-
-            error = data.get("text", data.get("error", {}).get("code", ""))
-            raise HTTPException(400, f"فشل جلب الفيديو من يوتيوب: {error}")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(400, f"خدمة تحميل اليوتيوب غير متاحة: {str(e)[:80]}")
-
-
-async def _download_video(url: str) -> tuple[bytes, str]:
-    """Download video bytes and detect extension."""
-    import httpx
+    # Download direct video URL
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=45) as client:
-            resp = await client.get(url)
+            resp = await client.get(req.url)
             resp.raise_for_status()
     except Exception as e:
         raise HTTPException(400, f"فشل تحميل الفيديو: {str(e)[:100]}")
@@ -133,24 +100,10 @@ async def _download_video(url: str) -> tuple[bytes, str]:
 
     if not (is_mp4 or is_webm):
         if video_bytes[:100].lstrip().startswith((b'<', b'<!', b'{', b'[')):
-            raise HTTPException(400, "الرابط يشير إلى صفحة ويب وليس ملف فيديو")
-        raise HTTPException(400, "الملف ليس بتنسيق فيديو مدعوم")
+            raise HTTPException(400, "الرابط يشير إلى صفحة ويب وليس ملف فيديو مباشر")
+        raise HTTPException(400, "الملف ليس بتنسيق فيديو مدعوم (MP4/WebM)")
 
-    ct = resp.headers.get("content-type", "").lower()
     ext = "webm" if is_webm else "mp4"
-    return video_bytes, ext
-
-
-@app.post("/api/url-reference")
-async def api_url_reference(req: URLRefRequest):
-    # If YouTube URL → resolve to direct URL first
-    download_url = req.url
-    if _is_youtube(req.url):
-        download_url = await _resolve_youtube_url(req.url)
-        if not download_url:
-            raise HTTPException(400, "فشل استخراج رابط الفيديو من يوتيوب")
-
-    video_bytes, ext = await _download_video(download_url)
 
     url = upload_reference(video_bytes, f"url_ref.{ext}", f"video/{ext}",
                            req.session_id, req.purpose)

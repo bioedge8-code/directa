@@ -380,13 +380,17 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
   card.appendChild(skip);
 }
 
+function _isYouTubeUrl(url) {
+  return url.includes('youtube.com/') || url.includes('youtu.be/');
+}
+
 function addVideoUrlInput(card, refField) {
   const wrapper = document.createElement('div');
   wrapper.style.cssText = 'margin-top:12px;display:flex;gap:8px;align-items:center;';
 
   const input = document.createElement('input');
   input.className = 'text-input';
-  input.placeholder = 'الصق رابط يوتيوب أو رابط فيديو مباشر...';
+  input.placeholder = 'الصق رابط فيديو مباشر (MP4)...';
   input.dir = 'ltr';
   input.style.flex = '1';
 
@@ -396,9 +400,26 @@ function addVideoUrlInput(card, refField) {
   btn.textContent = 'جلب';
   btn.disabled = true;
 
+  // YouTube helper message
+  const ytMsg = document.createElement('div');
+  ytMsg.className = 'hidden';
+  ytMsg.style.cssText = 'margin-top:8px;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;font-size:0.78rem;line-height:1.6;color:#999;';
+  ytMsg.innerHTML = `
+    رابط يوتيوب لا يعمل مباشرة. حمّل المقطع أولاً:<br>
+    1. افتح <a href="https://cobalt.tools" target="_blank" style="color:#C9A84C;">cobalt.tools</a> أو <a href="https://ssyoutube.com" target="_blank" style="color:#C9A84C;">ssyoutube.com</a><br>
+    2. الصق رابط اليوتيوب وحمّل MP4<br>
+    3. ارفع الملف هنا بالزر أعلاه
+  `;
+
   input.addEventListener('input', () => {
     const v = input.value.trim();
-    btn.disabled = !v.startsWith('http');
+    if (_isYouTubeUrl(v)) {
+      ytMsg.classList.remove('hidden');
+      btn.disabled = true;
+    } else {
+      ytMsg.classList.add('hidden');
+      btn.disabled = !v.startsWith('http');
+    }
   });
 
   btn.addEventListener('click', async () => {
@@ -433,6 +454,7 @@ function addVideoUrlInput(card, refField) {
   wrapper.appendChild(input);
   wrapper.appendChild(btn);
   card.appendChild(wrapper);
+  card.appendChild(ytMsg);
 }
 
 function addChipGrid(card, options, field) {
