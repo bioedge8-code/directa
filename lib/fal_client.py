@@ -17,7 +17,7 @@ def submit_generation(
     duration: str = "5",
     aspect_ratio: str = "16:9",
     resolution: str = "720p",
-    generate_audio: bool = True,
+    generate_audio: bool = False,
     seed: int | None = None,
 ) -> dict:
     _ensure_key()
