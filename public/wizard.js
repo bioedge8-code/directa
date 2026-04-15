@@ -397,6 +397,7 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
       <img id="thumb-${purpose}" src="" alt="">
       <span class="upload-filename" id="fname-${purpose}"></span>
       <span class="upload-check">&#10003;</span>
+      <span class="upload-remove" id="remove-${purpose}" style="color:#e74c3c;cursor:pointer;font-size:1.1rem;margin-right:6px;">✕</span>
     </div>
   `;
 
@@ -407,7 +408,17 @@ function addUploadZone(card, purpose, icon, text, subText, acceptTypes, refField
 
   zone.addEventListener('click', (e) => {
     if (e.target.closest('.ref-description') || e.target.closest('.text-input')) return;
+    if (e.target.closest('.upload-remove')) return;
     fileInput.click();
+  });
+
+  // Remove button
+  zone.querySelector(`#remove-${purpose}`).addEventListener('click', (e) => {
+    e.stopPropagation();
+    wizardData[refField] = null;
+    saveState();
+    zone.classList.remove('uploaded');
+    zone.querySelector(`#preview-${purpose}`).classList.remove('visible');
   });
 
   fileInput.addEventListener('change', async () => {
