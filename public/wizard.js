@@ -405,10 +405,10 @@ function addVideoUrlInput(card, refField) {
   ytMsg.className = 'hidden';
   ytMsg.style.cssText = 'margin-top:8px;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;font-size:0.78rem;line-height:1.6;color:#999;';
   ytMsg.innerHTML = `
-    رابط يوتيوب لا يعمل مباشرة. حمّل المقطع أولاً:<br>
-    1. افتح <a href="https://cobalt.tools" target="_blank" style="color:#C9A84C;">cobalt.tools</a> أو <a href="https://ssyoutube.com" target="_blank" style="color:#C9A84C;">ssyoutube.com</a><br>
-    2. الصق رابط اليوتيوب وحمّل MP4<br>
-    3. ارفع الملف هنا بالزر أعلاه
+    رابط يوتيوب لا يعمل مباشرة. قص المقطع وحمّله أولاً:<br>
+    1. افتح <a href="https://ytcutter.com" target="_blank" style="color:#C9A84C;">ytcutter.com</a><br>
+    2. الصق رابط اليوتيوب → حدد البداية والنهاية (15 ثانية كحد أقصى)<br>
+    3. حمّل MP4 وارفعه هنا بالزر أعلاه
   `;
 
   input.addEventListener('input', () => {
