@@ -123,22 +123,49 @@ def check_video_status(operation_name: str) -> dict:
 
         video_entry = response.generated_videos[0]
         video_file = video_entry.video
-
-        # Always download video bytes — Google URLs need auth
         video_bytes = b""
+        video_url = None
+
+        # Method 1: save to temp file then read bytes
         try:
-            dl = client.files.download(file=video_file)
-            video_bytes = dl if isinstance(dl, bytes) else b""
+            import tempfile
+            tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+            tmp_path = tmp.name
+            tmp.close()
+            client.files.download(file=video_file)
+            video_file.save(tmp_path)
+            with open(tmp_path, "rb") as f:
+                video_bytes = f.read()
+            import os
+            os.remove(tmp_path)
         except Exception:
             pass
 
-        # Fallback: try URI if download failed
-        video_url = None
+        # Method 2: try direct download if save failed
+        if not video_bytes:
+            try:
+                dl = client.files.download(file=video_file)
+                if isinstance(dl, bytes):
+                    video_bytes = dl
+            except Exception:
+                pass
+
+        # Method 3: get URI as fallback
         if not video_bytes:
             if isinstance(video_file, str):
                 video_url = video_file
             elif hasattr(video_file, 'uri') and video_file.uri:
                 video_url = video_file.uri
+            # Try downloading URI with httpx
+            if video_url:
+                try:
+                    import httpx
+                    api_key = os.environ.get("GEMINI_API_KEY", "")
+                    r = httpx.get(f"{video_url}?key={api_key}", timeout=30, follow_redirects=True)
+                    if r.status_code == 200 and len(r.content) > 1000:
+                        video_bytes = r.content
+                except Exception:
+                    pass
 
         return {
             "status": "done",
