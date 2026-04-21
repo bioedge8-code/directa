@@ -65,32 +65,37 @@ def submit_video(
     """Submit video generation to Veo 3.1."""
     client = get_client()
 
-    config = {
-        "aspect_ratio": aspect_ratio,
+    kwargs = {
+        "model": model,
+        "prompt": prompt,
+        "config": types.GenerateVideosConfig(aspect_ratio=aspect_ratio),
     }
 
     if image_bytes:
-        # Image-to-video
-        image = types.Image(
+        # Ensure bytes not string
+        if isinstance(image_bytes, str):
+            image_bytes = base64.b64decode(image_bytes)
+        kwargs["image"] = types.Image(
             image_bytes=image_bytes,
             mime_type=image_mime,
         )
-        operation = client.models.generate_videos(
-            model=model,
-            prompt=prompt,
-            image=image,
-            config=types.GenerateVideosConfig(**config),
-        )
-    else:
-        # Text-to-video
-        operation = client.models.generate_videos(
-            model=model,
-            prompt=prompt,
-            config=types.GenerateVideosConfig(**config),
-        )
 
-    # operation can be an object with .name or a string
-    op_name = operation.name if hasattr(operation, 'name') else str(operation)
+    operation = client.models.generate_videos(**kwargs)
+
+    # Extract operation name — handle different return types
+    op_name = ""
+    if hasattr(operation, 'name'):
+        op_name = operation.name
+    elif isinstance(operation, dict):
+        op_name = operation.get("name", str(operation))
+    else:
+        # Try to get any useful identifier
+        for attr in ('operation_name', 'id', '_operation_name'):
+            if hasattr(operation, attr):
+                op_name = getattr(operation, attr)
+                break
+        if not op_name:
+            op_name = repr(operation)[:200]
 
     return {
         "operation_name": op_name,
