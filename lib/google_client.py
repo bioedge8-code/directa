@@ -70,18 +70,6 @@ def submit_video(
         "aspect_ratio": aspect_ratio,
     }
 
-    # Duration mapping — Veo uses number_of_frames or duration_seconds
-    try:
-        dur_int = int(duration)
-        if dur_int <= 5:
-            config["number_of_frames"] = 120  # ~5s at 24fps
-        elif dur_int <= 8:
-            config["number_of_frames"] = 192  # ~8s
-        else:
-            config["number_of_frames"] = 240  # ~10s
-    except ValueError:
-        config["number_of_frames"] = 120
-
     if image_bytes:
         # Image-to-video
         image = types.Image(
