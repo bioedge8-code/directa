@@ -26,6 +26,7 @@ const wizardData = (saved && saved.data) || {
   duration: '5',
   aspect_ratio: '16:9',
   resolution: '720p',
+  provider: 'seedance',
   fixed_elements: [],
   avoid_elements: [],
   avoid_extra: '',
@@ -693,6 +694,12 @@ function renderStep8(card) {
 function renderStep9(card) {
   addQuestion(card, 'نوع اللقطة والتفاصيل التقنية', '');
 
+  addSectionLabel(card, 'محرك التوليد');
+  addOptionGrid(card, [
+    ['⚡ Seedance 2.0 — سريع وأرخص', 'seedance'],
+    ['🎬 Veo 3.1 — جودة أعلى + Nano Banana', 'veo'],
+  ], 'provider');
+
   addSectionLabel(card, 'نوع اللقطة');
   addOptionGrid(card, [
     ['🌍 لقطة واسعة — Wide', 'wide'],
@@ -937,6 +944,7 @@ async function startGeneration(btn) {
         duration: wizardData.duration || '5',
         aspect_ratio: wizardData.aspect_ratio || '16:9',
         resolution: wizardData.resolution || '720p',
+        provider: wizardData.provider || 'seedance',
       }),
     });
 
@@ -1046,6 +1054,7 @@ function showVideoResult(videoUrl) {
           duration: wizardData.duration || '5',
         aspect_ratio: wizardData.aspect_ratio || '16:9',
         resolution: wizardData.resolution || '720p',
+        provider: wizardData.provider || 'seedance',
         }),
       });
       generationId = result.generation_id;
@@ -1116,6 +1125,7 @@ function showError(errorMsg) {
           duration: wizardData.duration || '5',
         aspect_ratio: wizardData.aspect_ratio || '16:9',
         resolution: wizardData.resolution || '720p',
+        provider: wizardData.provider || 'seedance',
         }),
       });
       generationId = result.generation_id;

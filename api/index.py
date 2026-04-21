@@ -13,7 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from lib.prompt_builder import build_prompts
-from lib.fal_client import submit_generation, check_status
+from lib.fal_client import submit_generation as fal_submit, check_status as fal_check
+from lib.google_client import generate_keyframe, submit_video as veo_submit, check_video_status as veo_check
 from lib.supabase_client import (
     upload_reference,
     create_generation,
@@ -88,6 +89,8 @@ class GenerateRequest(BaseModel):
     duration: str = "5"
     aspect_ratio: str = "16:9"
     resolution: str = "720p"
+    provider: str = "seedance"  # "seedance" or "veo"
+    veo_model: str = "veo-3.1-fast-generate-preview"
 
 @app.post("/api/generate")
 async def api_generate(req: GenerateRequest):
@@ -102,7 +105,7 @@ async def api_generate(req: GenerateRequest):
         references=req.references,
     )
 
-    # Collect reference URLs as lists (reference-to-video accepts arrays)
+    # Collect reference URLs
     image_types = ("png", "jpg", "jpeg", "webp")
     video_types = ("mp4", "mov", "webm")
     audio_types = ("mp3", "wav", "m4a")
@@ -123,31 +126,73 @@ async def api_generate(req: GenerateRequest):
             ref_audio_urls.append(url)
 
     try:
-        fal_result = submit_generation(
-            english_prompt=req.english_prompt,
-            ref_image_urls=ref_image_urls or None,
-            ref_video_urls=ref_video_urls or None,
-            ref_audio_urls=ref_audio_urls or None,
-            duration=req.duration,
-            aspect_ratio=req.aspect_ratio,
-            resolution=req.resolution,
-        )
-        update_generation(generation_id, {
-            "status": "processing",
-            "fal_request_id": fal_result["request_id"],
-            "thumbnail_url": fal_result["model"],
-        })
-    except Exception as e:
-        update_generation(generation_id, {
-            "status": "error",
-        })
-        raise HTTPException(500, f"Failed to submit to fal.ai: {str(e)}")
+        if req.provider == "veo":
+            # ── Veo 3.1 + Nano Banana 2 pipeline ─────────
+            image_bytes = None
+            image_mime = "image/png"
 
-    return {
-        "generation_id": generation_id,
-        "fal_request_id": fal_result["request_id"],
-        "model": fal_result["model"],
-    }
+            if ref_image_urls:
+                # Download first reference image for Veo
+                import httpx
+                async with httpx.AsyncClient(timeout=15) as client:
+                    resp = await client.get(ref_image_urls[0])
+                    image_bytes = resp.content
+                    ct = resp.headers.get("content-type", "image/png")
+                    image_mime = ct.split(";")[0]
+            else:
+                # No image reference → generate keyframe with Nano Banana 2
+                try:
+                    image_bytes = generate_keyframe(req.english_prompt)
+                    image_mime = "image/png"
+                except Exception:
+                    image_bytes = None  # Fall back to text-to-video
+
+            result = veo_submit(
+                prompt=req.english_prompt,
+                image_bytes=image_bytes,
+                image_mime=image_mime,
+                model=req.veo_model,
+                duration=req.duration,
+                aspect_ratio=req.aspect_ratio,
+            )
+            update_generation(generation_id, {
+                "status": "processing",
+                "fal_request_id": result["operation_name"],
+                "thumbnail_url": "veo:" + result["model"],
+            })
+            return {
+                "generation_id": generation_id,
+                "fal_request_id": result["operation_name"],
+                "model": result["model"],
+            }
+
+        else:
+            # ── Seedance 2.0 (fal.ai) ────────────────────
+            result = fal_submit(
+                english_prompt=req.english_prompt,
+                ref_image_urls=ref_image_urls or None,
+                ref_video_urls=ref_video_urls or None,
+                ref_audio_urls=ref_audio_urls or None,
+                duration=req.duration,
+                aspect_ratio=req.aspect_ratio,
+                resolution=req.resolution,
+            )
+            update_generation(generation_id, {
+                "status": "processing",
+                "fal_request_id": result["request_id"],
+                "thumbnail_url": result["model"],
+            })
+            return {
+                "generation_id": generation_id,
+                "fal_request_id": result["request_id"],
+                "model": result["model"],
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        update_generation(generation_id, {"status": "error"})
+        raise HTTPException(500, f"فشل إرسال التوليد: {str(e)}")
 
 
 # ── Status ───────────────────────────────────────────────────
@@ -165,34 +210,54 @@ async def api_status(generation_id: str):
             "progress": 100 if gen["status"] == "done" else 0,
         }
 
-    fal_request_id = gen.get("fal_request_id")
-    if not fal_request_id:
+    request_id = gen.get("fal_request_id")
+    if not request_id:
         return {"status": gen["status"], "progress": 0}
 
-    # Use saved model, or determine from references
-    model = gen.get("thumbnail_url") or "bytedance/seedance-2.0/fast/text-to-video"
-    if model and not model.startswith("bytedance"):
-        model = "bytedance/seedance-2.0/fast/text-to-video"
-        refs = gen.get("references") or []
-        for ref in refs:
-            if ref.get("purpose") == "character" and ref.get("file_type") in ("png", "jpg", "jpeg", "webp"):
-                model = "bytedance/seedance-2.0/fast/image-to-video"
-                break
+    saved_model = gen.get("thumbnail_url") or ""
+    is_veo = saved_model.startswith("veo:")
 
-    result = check_status(model, fal_request_id)
+    if is_veo:
+        # ── Veo 3.1 status ────────────────────────────
+        result = veo_check(request_id)
 
-    if result["status"] == "done" and result.get("video_url"):
-        update_generation(generation_id, {
-            "status": "done",
-            "video_url": result["video_url"],
-        })
+        if result["status"] == "done":
+            video_url = result.get("video_url")
+            # If we got video bytes but no URL, upload to Supabase
+            video_bytes = result.get("video_bytes")
+            if video_bytes and not video_url:
+                from lib.supabase_client import upload_reference
+                video_url = upload_reference(
+                    video_bytes, "veo_output.mp4", "video/mp4",
+                    gen.get("session_id", "unknown"), "output"
+                )
+            if video_url:
+                update_generation(generation_id, {
+                    "status": "done",
+                    "video_url": video_url,
+                })
+            result["video_url"] = video_url
 
-    if result["status"] == "error":
-        update_generation(generation_id, {
-            "status": "error",
-        })
+        if result["status"] == "error":
+            update_generation(generation_id, {"status": "error"})
 
-    return result
+        return result
+
+    else:
+        # ── Seedance (fal.ai) status ──────────────────
+        model = saved_model or "bytedance/seedance-2.0/fast/text-to-video"
+        result = fal_check(model, request_id)
+
+        if result["status"] == "done" and result.get("video_url"):
+            update_generation(generation_id, {
+                "status": "done",
+                "video_url": result["video_url"],
+            })
+
+        if result["status"] == "error":
+            update_generation(generation_id, {"status": "error"})
+
+        return result
 
 
 # ── History ──────────────────────────────────────────────────
