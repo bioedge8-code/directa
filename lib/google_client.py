@@ -66,7 +66,6 @@ def submit_video(
     client = get_client()
 
     config = {
-        "person_generation": "allow_all",
         "aspect_ratio": aspect_ratio,
     }
 
