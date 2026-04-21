@@ -246,21 +246,23 @@ async def api_status(generation_id: str):
         result = veo_check(request_id)
 
         if result["status"] == "done":
+            video_bytes = result.get("video_bytes", b"")
             video_url = result.get("video_url")
-            # If we got video bytes but no URL, upload to Supabase
-            video_bytes = result.get("video_bytes")
-            if video_bytes and not video_url:
-                from lib.supabase_client import upload_reference
+
+            # Always upload to Supabase — Google URLs need auth
+            if video_bytes:
                 video_url = upload_reference(
                     video_bytes, "veo_output.mp4", "video/mp4",
                     gen.get("session_id", "unknown"), "output"
                 )
+
             if video_url:
                 update_generation(generation_id, {
                     "status": "done",
                     "video_url": video_url,
                 })
             result["video_url"] = video_url
+            result.pop("video_bytes", None)
 
         if result["status"] == "error":
             update_generation(generation_id, {"status": "error"})

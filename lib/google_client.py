@@ -124,23 +124,21 @@ def check_video_status(operation_name: str) -> dict:
         video_entry = response.generated_videos[0]
         video_file = video_entry.video
 
-        # Get video URL — handle string or object
-        video_url = None
+        # Always download video bytes — Google URLs need auth
         video_bytes = b""
+        try:
+            dl = client.files.download(file=video_file)
+            video_bytes = dl if isinstance(dl, bytes) else b""
+        except Exception:
+            pass
 
-        if isinstance(video_file, str):
-            # video_file is already a URI string
-            video_url = video_file
-        elif hasattr(video_file, 'uri') and video_file.uri:
-            video_url = video_file.uri
-
-        # Try downloading if we have a file object
-        if not video_url and video_file:
-            try:
-                dl = client.files.download(file=video_file)
-                video_bytes = dl if isinstance(dl, bytes) else b""
-            except Exception:
-                pass
+        # Fallback: try URI if download failed
+        video_url = None
+        if not video_bytes:
+            if isinstance(video_file, str):
+                video_url = video_file
+            elif hasattr(video_file, 'uri') and video_file.uri:
+                video_url = video_file.uri
 
         return {
             "status": "done",
