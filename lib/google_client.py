@@ -15,12 +15,32 @@ def get_client():
     return _client
 
 
-def generate_keyframe(prompt: str) -> bytes:
-    """Generate a keyframe image using Nano Banana 2."""
+def generate_keyframe(prompt: str, ref_image_bytes: bytes | None = None,
+                      ref_image_mime: str = "image/png") -> bytes:
+    """Generate a keyframe image using Nano Banana 2.
+    If ref_image_bytes provided, uses it as visual reference for the generation."""
     client = get_client()
+
+    if ref_image_bytes:
+        # Send reference image + prompt → Nano Banana generates inspired keyframe
+        contents = [
+            types.Part(
+                inline_data=types.Blob(
+                    mime_type=ref_image_mime,
+                    data=ref_image_bytes,
+                )
+            ),
+            types.Part(text=(
+                f"Using this image as a visual reference for style, subject, and composition, "
+                f"generate a new cinematic keyframe image based on this description: {prompt}"
+            )),
+        ]
+    else:
+        contents = [f"Generate a cinematic keyframe image: {prompt}"]
+
     response = client.models.generate_content(
         model="gemini-3.1-flash-image-preview",
-        contents=prompt,
+        contents=contents,
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
         ),

@@ -128,24 +128,35 @@ async def api_generate(req: GenerateRequest):
     try:
         if req.provider == "veo":
             # ── Veo 3.1 + Nano Banana 2 pipeline ─────────
-            image_bytes = None
-            image_mime = "image/png"
+            # Always generate keyframe with Nano Banana 2 first
+            # If reference image exists → use it as inspiration source
+            ref_bytes = None
+            ref_mime = "image/png"
 
             if ref_image_urls:
-                # Download first reference image for Veo
+                # Download reference image to feed to Nano Banana
                 import httpx
                 async with httpx.AsyncClient(timeout=15) as client:
                     resp = await client.get(ref_image_urls[0])
-                    image_bytes = resp.content
-                    ct = resp.headers.get("content-type", "image/png")
-                    image_mime = ct.split(";")[0]
-            else:
-                # No image reference → generate keyframe with Nano Banana 2
-                try:
-                    image_bytes = generate_keyframe(req.english_prompt)
+                    ref_bytes = resp.content
+                    ref_mime = resp.headers.get("content-type", "image/png").split(";")[0]
+
+            # Nano Banana 2 generates the keyframe (with or without reference)
+            try:
+                image_bytes = generate_keyframe(
+                    req.english_prompt,
+                    ref_image_bytes=ref_bytes,
+                    ref_image_mime=ref_mime,
+                )
+                image_mime = "image/png"
+            except Exception as e:
+                if ref_bytes:
+                    # Fallback: use reference image directly
+                    image_bytes = ref_bytes
+                    image_mime = ref_mime
+                else:
+                    image_bytes = None
                     image_mime = "image/png"
-                except Exception:
-                    image_bytes = None  # Fall back to text-to-video
 
             result = veo_submit(
                 prompt=req.english_prompt,
