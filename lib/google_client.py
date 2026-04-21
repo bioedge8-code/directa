@@ -89,8 +89,11 @@ def submit_video(
             config=types.GenerateVideosConfig(**config),
         )
 
+    # operation can be an object with .name or a string
+    op_name = operation.name if hasattr(operation, 'name') else str(operation)
+
     return {
-        "operation_name": operation.name,
+        "operation_name": op_name,
         "model": model,
     }
 
