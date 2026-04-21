@@ -108,7 +108,9 @@ def check_video_status(operation_name: str) -> dict:
     client = get_client()
 
     try:
-        operation = client.operations.get(operation=operation_name)
+        # SDK expects object with .name, not a raw string
+        op_ref = type('_Op', (), {'name': operation_name})()
+        operation = client.operations.get(operation=op_ref)
 
         if not operation.done:
             return {"status": "processing", "progress": 50}
