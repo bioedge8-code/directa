@@ -110,39 +110,46 @@ def check_video_status(operation_name: str) -> dict:
     try:
         operation = client.operations.get(operation=operation_name)
 
-        if operation.done:
-            if operation.response and operation.response.generated_videos:
-                video = operation.response.generated_videos[0]
-                # Download video to get URL
-                video_data = client.files.download(file=video.video)
-                # Return as base64 data URL for now — we'll upload to Supabase
-                video_bytes = video_data if isinstance(video_data, bytes) else b""
+        if not operation.done:
+            return {"status": "processing", "progress": 50}
 
-                # Try to get the video URI
-                video_url = None
-                if hasattr(video.video, "uri"):
-                    video_url = video.video.uri
-
-                return {
-                    "status": "done",
-                    "video_url": video_url,
-                    "video_bytes": video_bytes,
-                    "progress": 100,
-                }
-
+        # Done — extract video
+        response = operation.response
+        if not response or not hasattr(response, 'generated_videos') or not response.generated_videos:
             error = getattr(operation, "error", None)
-            return {
-                "status": "error",
-                "error": str(error) if error else "فشل التوليد بدون سبب واضح",
-            }
+            return {"status": "error", "error": str(error) if error else "فشل التوليد"}
+
+        video_entry = response.generated_videos[0]
+        video_file = video_entry.video
+
+        # Get video URL — handle string or object
+        video_url = None
+        video_bytes = b""
+
+        if isinstance(video_file, str):
+            # video_file is already a URI string
+            video_url = video_file
+        elif hasattr(video_file, 'uri') and video_file.uri:
+            video_url = video_file.uri
+
+        # Try downloading if we have a file object
+        if not video_url and video_file:
+            try:
+                dl = client.files.download(file=video_file)
+                video_bytes = dl if isinstance(dl, bytes) else b""
+            except Exception:
+                pass
 
         return {
-            "status": "processing",
-            "progress": 50,
+            "status": "done",
+            "video_url": video_url,
+            "video_bytes": video_bytes,
+            "progress": 100,
         }
 
     except Exception as e:
+        import traceback
         return {
             "status": "error",
-            "error": str(e)[:200],
+            "error": f"{str(e)[:150]}\n{traceback.format_exc()[-200:]}",
         }
