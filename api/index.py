@@ -34,6 +34,17 @@ app.add_middleware(
 )
 
 
+# ── Auth Config ──────────────────────────────────────────────
+
+@app.get("/api/auth-config")
+async def api_auth_config():
+    url = os.environ.get("SUPABASE_URL", "")
+    anon_key = os.environ.get("SUPABASE_ANON_KEY", "")
+    if not url or not anon_key:
+        raise HTTPException(404, "Auth not configured")
+    return {"url": url, "anon_key": anon_key}
+
+
 # ── Upload Reference ─────────────────────────────────────────
 
 @app.post("/api/upload-reference")

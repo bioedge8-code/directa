@@ -1,3 +1,121 @@
+// ── Auth ─────────────────────────────────────────────────────
+let supabaseClient = null;
+let currentUser = null;
+
+async function initAuth() {
+  // Fetch Supabase config from server
+  try {
+    const config = await api('/api/auth-config');
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    supabaseClient = createClient(config.url, config.anon_key);
+
+    // Check existing session
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      showApp();
+      return;
+    }
+  } catch (e) {
+    // If auth config fails, show app anyway (no auth configured)
+    showApp();
+    return;
+  }
+
+  // Show auth screen
+  show($('#auth-screen'));
+  setupAuthUI();
+}
+
+function setupAuthUI() {
+  let isSignUp = false;
+  const btn = $('#auth-btn');
+  const email = $('#auth-email');
+  const password = $('#auth-password');
+  const error = $('#auth-error');
+  const toggleLink = $('#auth-toggle-link');
+  const toggleText = $('#auth-toggle-text');
+
+  toggleLink.addEventListener('click', () => {
+    isSignUp = !isSignUp;
+    btn.textContent = isSignUp ? 'إنشاء حساب' : 'تسجيل الدخول';
+    toggleText.textContent = isSignUp ? 'عندك حساب؟' : 'ما عندك حساب؟';
+    toggleLink.textContent = isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب';
+    error.classList.remove('visible');
+  });
+
+  btn.addEventListener('click', async () => {
+    const e = email.value.trim();
+    const p = password.value.trim();
+    if (!e || !p) { showAuthError('ادخل البريد وكلمة المرور'); return; }
+    if (p.length < 6) { showAuthError('كلمة المرور لازم 6 أحرف على الأقل'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'جاري...';
+    error.classList.remove('visible');
+
+    try {
+      let result;
+      if (isSignUp) {
+        result = await supabaseClient.auth.signUp({ email: e, password: p });
+      } else {
+        result = await supabaseClient.auth.signInWithPassword({ email: e, password: p });
+      }
+
+      if (result.error) {
+        showAuthError(result.error.message);
+        btn.disabled = false;
+        btn.textContent = isSignUp ? 'إنشاء حساب' : 'تسجيل الدخول';
+        return;
+      }
+
+      if (isSignUp && !result.data.session) {
+        showAuthError('تم إنشاء الحساب. تحقق من بريدك للتفعيل.');
+        btn.disabled = false;
+        btn.textContent = 'إنشاء حساب';
+        return;
+      }
+
+      currentUser = result.data.user;
+      showApp();
+    } catch (err) {
+      showAuthError(err.message || 'حدث خطأ');
+      btn.disabled = false;
+      btn.textContent = isSignUp ? 'إنشاء حساب' : 'تسجيل الدخول';
+    }
+  });
+
+  // Enter key
+  password.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
+}
+
+function showAuthError(msg) {
+  const el = $('#auth-error');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function showApp() {
+  hide($('#auth-screen'));
+  // Show landing or restore wizard
+  if (saved && saved.step > 1) {
+    show($('#wizard-view'));
+    renderStep();
+  } else {
+    show($('#landing-page'));
+  }
+  renderTemplatesOnLanding();
+}
+
+async function logout() {
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut();
+  }
+  currentUser = null;
+  clearState();
+  location.reload();
+}
+
 // ── State ────────────────────────────────────────────────────
 const STORAGE_KEY = 'directa_state';
 const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
@@ -1291,13 +1409,8 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     showHistory();
   });
+  document.getElementById('logout-link').addEventListener('click', logout);
 
-  renderTemplatesOnLanding();
-
-  // Restore saved state — skip landing if wizard was in progress
-  if (saved && saved.step > 1) {
-    hide($('#landing-page'));
-    show($('#wizard-view'));
-    renderStep();
-  }
+  // Start auth flow
+  initAuth();
 });

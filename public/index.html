@@ -8,21 +8,37 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
-  <meta name="theme-color" content="#080808">
+  <meta name="theme-color" content="#f7f7f8">
 </head>
 <body>
 
+  <!-- Auth Screen -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-box">
+      <div class="auth-logo">Directa</div>
+      <div class="auth-sub">سجّل دخولك لبدء صناعة الفيديو</div>
+      <div class="auth-error" id="auth-error"></div>
+      <input class="auth-input" id="auth-email" type="email" placeholder="البريد الإلكتروني" autocomplete="email">
+      <input class="auth-input" id="auth-password" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+      <button class="auth-btn" id="auth-btn">تسجيل الدخول</button>
+      <div class="auth-toggle">
+        <span id="auth-toggle-text">ما عندك حساب؟</span>
+        <a id="auth-toggle-link">إنشاء حساب</a>
+      </div>
+    </div>
+  </div>
+
   <!-- Landing Page -->
-  <div id="landing-page" class="landing">
+  <div id="landing-page" class="landing hidden">
     <div class="landing-content">
       <div class="landing-logo">Directa</div>
       <div class="landing-tagline">حوّل رؤيتك إلى فيديو سينمائي</div>
       <div class="landing-sub">اختر، وصف، وخلّ الذكاء الاصطناعي يخرج لك المشهد</div>
       <button class="landing-btn" id="btn-start">ابدأ الآن</button>
-      <div class="landing-history" id="landing-history">📋 مشاريعي السابقة</div>
+      <div class="landing-history" id="landing-history">مشاريعي السابقة</div>
       <div id="landing-templates"></div>
     </div>
-    <div class="landing-footer">Powered by fal.ai</div>
+    <div class="landing-footer">Powered by fal.ai & Google Veo</div>
   </div>
 
   <!-- Wizard -->
@@ -30,8 +46,11 @@
     <div id="progress-bar" style="width: 0%"></div>
 
     <div class="header">
-      <span class="logo">Directa</span>
-      <a href="#" class="history-link" id="history-link">📋 مشاريعي</a>
+      <div>
+        <span class="logo">Directa</span>
+        <span class="logout-link" id="logout-link">خروج</span>
+      </div>
+      <a href="#" class="history-link" id="history-link">مشاريعي</a>
     </div>
 
     <div class="step-counter" id="step-counter"></div>
