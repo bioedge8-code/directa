@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
-  <meta name="theme-color" content="#f7f7f8">
+  <meta name="theme-color" content="#fafafa">
 </head>
 <body>
 
@@ -28,45 +28,54 @@
     </div>
   </div>
 
-  <!-- Landing Page -->
-  <div id="landing-page" class="landing hidden">
-    <div class="landing-content">
-      <div class="landing-logo">Directa</div>
-      <div class="landing-tagline">حوّل رؤيتك إلى فيديو سينمائي</div>
-      <div class="landing-sub">اختر، وصف، وخلّ الذكاء الاصطناعي يخرج لك المشهد</div>
-      <button class="landing-btn" id="btn-start">ابدأ الآن</button>
-      <div class="landing-history" id="landing-history">مشاريعي السابقة</div>
-      <div id="landing-templates"></div>
-    </div>
-    <div class="landing-footer">Powered by fal.ai & Google Veo</div>
-  </div>
+  <!-- App Shell (hidden until auth) -->
+  <div id="app-shell" class="hidden">
 
-  <!-- Wizard -->
-  <div id="wizard-view" class="hidden">
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <span class="navbar-logo" id="nav-logo">Directa</span>
+        <div class="navbar-links">
+          <button class="navbar-link" id="nav-new">مشروع جديد</button>
+          <button class="navbar-link" id="nav-projects">مشاريعي</button>
+          <button class="navbar-link logout" id="logout-link">خروج</button>
+        </div>
+      </div>
+    </nav>
+
     <div id="progress-bar" style="width: 0%"></div>
 
-    <div class="header">
-      <div>
-        <span class="logo">Directa</span>
-        <span class="logout-link" id="logout-link">خروج</span>
-      </div>
-      <a href="#" class="history-link" id="history-link">مشاريعي</a>
-    </div>
-
-    <div class="step-counter" id="step-counter"></div>
-
-    <div class="wizard-container">
-      <div id="wizard-content"></div>
-
-      <div class="nav-buttons" id="nav-buttons">
-        <button class="nav-btn back hidden" id="btn-back">رجوع</button>
-        <button class="nav-btn next" id="btn-next" disabled>التالي</button>
+    <!-- Landing -->
+    <div id="landing-page" class="landing">
+      <div class="landing-content">
+        <div class="landing-badge">AI Video Generation</div>
+        <div class="landing-logo">Direct<span>a</span></div>
+        <div class="landing-tagline">حوّل رؤيتك إلى فيديو سينمائي</div>
+        <div class="landing-sub">اختر، وصف، وخلّ الذكاء الاصطناعي يخرج لك المشهد</div>
+        <button class="landing-btn" id="btn-start">ابدأ مشروع جديد</button>
+        <div id="landing-templates"></div>
       </div>
     </div>
-  </div>
 
-  <div class="wizard-container">
-    <div class="history-panel" id="history-panel"></div>
+    <!-- Wizard -->
+    <div id="wizard-view" class="hidden">
+      <div class="main-content">
+        <div class="step-counter" id="step-counter"></div>
+        <div id="wizard-content"></div>
+        <div class="nav-buttons" id="nav-buttons">
+          <button class="nav-btn back hidden" id="btn-back">رجوع</button>
+          <button class="nav-btn next" id="btn-next" disabled>التالي</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div id="history-view" class="hidden">
+      <div class="main-content">
+        <div class="history-panel visible" id="history-panel"></div>
+      </div>
+    </div>
+
   </div>
 
   <script src="/wizard.js"></script>

@@ -97,8 +97,9 @@ function showAuthError(msg) {
 
 function showApp() {
   hide($('#auth-screen'));
-  // Show landing or restore wizard
+  show($('#app-shell'));
   if (saved && saved.step > 1) {
+    hide($('#landing-page'));
     show($('#wizard-view'));
     renderStep();
   } else {
@@ -1266,12 +1267,15 @@ function showError(errorMsg) {
 
 async function showHistory() {
   hide($('#wizard-view'));
+  hide($('#landing-page'));
+  show($('#history-view'));
   const panel = $('#history-panel');
-  panel.classList.add('visible');
 
   panel.innerHTML = `
-    <span class="history-back" id="history-back-btn">→ رجوع لـ Directa</span>
-    <div class="step-question">مشاريعي</div>
+    <div class="history-header">
+      <div class="history-title">مشاريعي</div>
+      <button class="history-back-btn" id="history-back-btn">رجوع</button>
+    </div>
     <div id="history-content"><div class="building-prompt">جاري التحميل<span class="dots">...</span></div></div>
   `;
 
@@ -1350,8 +1354,8 @@ async function showHistory() {
 }
 
 function hideHistory() {
-  show($('#wizard-view'));
-  $('#history-panel').classList.remove('visible');
+  hide($('#history-view'));
+  show($('#landing-page'));
 }
 
 
@@ -1359,6 +1363,7 @@ function hideHistory() {
 
 function startWizard() {
   hide($('#landing-page'));
+  hide($('#history-view'));
   show($('#wizard-view'));
   renderStep();
 }
@@ -1396,21 +1401,19 @@ function renderTemplatesOnLanding() {
 // ── Init ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('btn-start').addEventListener('click', startWizard);
-  document.getElementById('landing-history').addEventListener('click', () => {
-    hide($('#landing-page'));
-    show($('#wizard-view'));
-    renderStep();
-    showHistory();
-  });
-  document.getElementById('btn-next').addEventListener('click', goNext);
-  document.getElementById('btn-back').addEventListener('click', goBack);
-  document.getElementById('history-link').addEventListener('click', (e) => {
-    e.preventDefault();
-    showHistory();
-  });
-  document.getElementById('logout-link').addEventListener('click', logout);
+  $('#btn-start').addEventListener('click', startWizard);
+  $('#btn-next').addEventListener('click', goNext);
+  $('#btn-back').addEventListener('click', goBack);
+  $('#logout-link').addEventListener('click', logout);
 
-  // Start auth flow
+  // Navbar
+  $('#nav-logo').addEventListener('click', () => {
+    hide($('#wizard-view'));
+    hide($('#history-view'));
+    show($('#landing-page'));
+  });
+  $('#nav-new').addEventListener('click', startWizard);
+  $('#nav-projects').addEventListener('click', showHistory);
+
   initAuth();
 });
