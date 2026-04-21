@@ -213,8 +213,10 @@ async def api_generate(req: GenerateRequest):
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         update_generation(generation_id, {"status": "error"})
-        raise HTTPException(500, f"فشل إرسال التوليد: {str(e)}")
+        raise HTTPException(500, f"فشل إرسال التوليد: {str(e)}\n\n{tb}")
 
 
 # ── Status ───────────────────────────────────────────────────
