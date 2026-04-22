@@ -1559,9 +1559,16 @@ function addChatBubble(role, text, readyData) {
     const thumbs = document.createElement('div');
     thumbs.className = 'chat-ref-thumbs';
     chatAttachments.forEach(a => {
-      const img = document.createElement('img');
-      img.src = a.localUrl || a.url;
-      thumbs.appendChild(img);
+      if (a.file && a.file.type === 'application/pdf') {
+        const span = document.createElement('span');
+        span.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:0.72rem;';
+        span.textContent = '📄 ' + a.file.name;
+        thumbs.appendChild(span);
+      } else {
+        const img = document.createElement('img');
+        img.src = a.localUrl || a.url;
+        thumbs.appendChild(img);
+      }
     });
     bubble.appendChild(thumbs);
   }
@@ -1616,14 +1623,22 @@ async function sendChatMessage() {
 
   // Build message for Claude
   const userContent = [];
-  chatAttachments.forEach(att => {
-    if (att.url) {
+  for (const att of chatAttachments) {
+    if (att.file && att.file.type === 'application/pdf') {
+      // PDF → base64 document for Claude
+      const bytes = await att.file.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+      userContent.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: b64 },
+      });
+    } else if (att.url) {
       userContent.push({
         type: 'image',
         source: { type: 'url', url: att.url },
       });
     }
-  });
+  }
   userContent.push({ type: 'text', text });
 
   chatMessages.push({ role: 'user', content: userContent });
