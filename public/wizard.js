@@ -1366,6 +1366,7 @@ function showError(errorMsg) {
 async function showHistory() {
   hide($('#wizard-view'));
   hide($('#landing-page'));
+  hide($('#chat-view'));
   show($('#history-view'));
   const panel = $('#history-panel');
 
@@ -1716,6 +1717,10 @@ function renderTemplatesOnLanding() {
 
 document.addEventListener('DOMContentLoaded', () => {
   $('#btn-start').addEventListener('click', startWizard);
+  $('#btn-my-projects').addEventListener('click', () => {
+    hide($('#landing-page'));
+    showHistory();
+  });
   $('#btn-next').addEventListener('click', goNext);
   $('#btn-back').addEventListener('click', goBack);
   $('#logout-link').addEventListener('click', logout);
