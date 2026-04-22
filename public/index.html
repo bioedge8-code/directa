@@ -64,7 +64,6 @@
         <div class="chat-input-area">
           <div class="chat-upload-bar" id="chat-upload-bar"></div>
           <div class="chat-input-row">
-            <input type="file" id="chat-file-input" accept="image/*" style="display:none" multiple>
             <button class="chat-attach-btn" id="chat-attach-btn" title="إرفاق صورة">📎</button>
             <input class="chat-input" id="chat-input" placeholder="اكتب رؤيتك للمشهد..." autofocus>
             <button class="chat-send-btn" id="chat-send-btn">إرسال</button>
@@ -94,6 +93,7 @@
 
   </div>
 
+  <input type="file" id="chat-file-input" accept="image/*,video/*" style="position:fixed;top:-9999px;opacity:0;" multiple>
   <script src="/wizard.js"></script>
 </body>
 </html>
