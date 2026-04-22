@@ -133,7 +133,7 @@ const wizardData = (saved && saved.data) || {
   environment: '',
   action: '',
   scene_feel: '',
-  ref_character: null,
+  ref_characters: [],
   ref_lighting: null,
   ref_camera: null,
   ref_audio: null,
@@ -197,7 +197,7 @@ function loadTemplate(idx) {
   if (!tpl) return;
   Object.assign(wizardData, tpl.data);
   // Clear refs since they belong to old sessions
-  wizardData.ref_character = null;
+  wizardData.ref_characters = [];
   wizardData.ref_lighting = null;
   wizardData.ref_camera = null;
   wizardData.ref_audio = null;
@@ -762,8 +762,98 @@ function renderStep3(card) {
 }
 
 function renderStep4(card) {
-  addQuestion(card, 'هل عندك صورة مرجعية للشخصية أو المنتج؟', 'هذا المرجع يثبت الشكل الأساسي — الوجه، العبوة، التفاصيل الجوهرية');
-  addUploadZone(card, 'character', '🎭', 'ارفع صورة الشخصية أو المنتج', 'PNG / JPG / WEBP — الحد الأقصى 10MB', 'image/png,image/jpeg,image/webp', 'ref_character');
+  addQuestion(card, 'صور مرجعية للشخصيات أو المنتجات', 'ارفع صورة لكل شخصية أو منتج وحدد دورها في المشهد');
+
+  const listEl = document.createElement('div');
+  listEl.id = 'char-ref-list';
+  card.appendChild(listEl);
+
+  function renderCharRefs() {
+    listEl.innerHTML = '';
+    (wizardData.ref_characters || []).forEach((ref, i) => {
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;gap:10px;align-items:center;padding:10px;background:var(--surface);border-radius:10px;margin-bottom:8px;';
+      const thumb = ref.file_type && ['png','jpg','jpeg','webp'].includes(ref.file_type)
+        ? `<img src="${ref.url}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;">`
+        : '<div style="width:44px;height:44px;background:#ddd;border-radius:8px;display:flex;align-items:center;justify-content:center;">📎</div>';
+      item.innerHTML = `
+        ${thumb}
+        <input class="text-input" style="flex:1;margin:0;padding:8px 10px;font-size:0.78rem;"
+          placeholder="مثال: الشخص الأول، المنتج، الممثل..."
+          value="${ref.label || ''}" data-idx="${i}">
+        <span style="color:var(--error);cursor:pointer;font-size:1.1rem;" data-del="${i}">✕</span>
+      `;
+      listEl.appendChild(item);
+
+      item.querySelector(`[data-idx="${i}"]`).addEventListener('input', (e) => {
+        wizardData.ref_characters[i].label = e.target.value;
+        saveState();
+      });
+      item.querySelector(`[data-del="${i}"]`).addEventListener('click', () => {
+        wizardData.ref_characters.splice(i, 1);
+        saveState();
+        renderCharRefs();
+      });
+    });
+  }
+
+  renderCharRefs();
+
+  // Upload button
+  const uploadBtn = document.createElement('div');
+  uploadBtn.className = 'upload-zone';
+  uploadBtn.style.padding = '16px';
+  uploadBtn.innerHTML = '<div class="upload-icon">🎭</div><div class="upload-text">أضف صورة شخصية أو منتج</div><div class="upload-sub">PNG / JPG / WEBP — الحد الأقصى 10MB</div>';
+  card.appendChild(uploadBtn);
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/png,image/jpeg,image/webp';
+  fileInput.style.display = 'none';
+  fileInput.multiple = true;
+  card.appendChild(fileInput);
+
+  uploadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async () => {
+    const files = Array.from(fileInput.files);
+    if (!files.length) return;
+
+    uploadBtn.classList.add('uploading');
+    uploadBtn.innerHTML = '<div class="upload-spinner visible"></div><div style="margin-top:8px;font-size:0.8rem;">جاري الرفع...</div>';
+
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('purpose', 'character');
+        formData.append('session_id', SESSION_ID);
+        const result = await api('/api/upload-reference', { method: 'POST', body: formData });
+
+        if (!wizardData.ref_characters) wizardData.ref_characters = [];
+        wizardData.ref_characters.push({
+          url: result.url,
+          file_type: result.file_type,
+          label: '',
+        });
+        saveState();
+      } catch (err) {
+        alert('فشل رفع: ' + file.name);
+      }
+    }
+
+    uploadBtn.classList.remove('uploading');
+    uploadBtn.innerHTML = '<div class="upload-icon">🎭</div><div class="upload-text">أضف صورة أخرى</div><div class="upload-sub">PNG / JPG / WEBP</div>';
+    renderCharRefs();
+    fileInput.value = '';
+  });
+
+  // Skip
+  const skip = document.createElement('button');
+  skip.className = 'skip-btn';
+  skip.textContent = 'تخطي — ليس عندي مراجع';
+  skip.addEventListener('click', () => goNext());
+  card.appendChild(skip);
 }
 
 function renderStep5(card) {
@@ -922,8 +1012,12 @@ async function renderStep11(card) {
 
   // References thumbnails
   const refs = [];
+  // Character refs (array)
+  (wizardData.ref_characters || []).forEach((r, i) => {
+    refs.push({ ...r, purpose: 'character', label: r.label || `شخصية ${i+1}` });
+  });
+  // Other refs (single)
   const refLabels = {
-    ref_character: 'الشخصية',
     ref_lighting: 'الإضاءة',
     ref_camera: 'الكاميرا',
     ref_audio: 'الصوت',
@@ -1039,14 +1133,14 @@ async function startGeneration(btn) {
   btn.textContent = 'جاري الإرسال...';
 
   const references = [];
-  const refKeys = ['ref_character', 'ref_lighting', 'ref_camera', 'ref_audio'];
-  refKeys.forEach(key => {
+  // Character refs (array)
+  (wizardData.ref_characters || []).forEach(r => {
+    if (r.url) references.push({ purpose: 'character', url: r.url, file_type: r.file_type || '', label: r.label || '' });
+  });
+  // Other refs (single)
+  ['ref_lighting', 'ref_camera', 'ref_audio'].forEach(key => {
     if (wizardData[key] && wizardData[key].url) {
-      references.push({
-        purpose: key.replace('ref_', ''),
-        url: wizardData[key].url,
-        file_type: wizardData[key].file_type || '',
-      });
+      references.push({ purpose: key.replace('ref_', ''), url: wizardData[key].url, file_type: wizardData[key].file_type || '' });
     }
   });
 

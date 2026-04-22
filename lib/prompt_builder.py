@@ -214,7 +214,7 @@ def build_prompts(data: dict) -> dict:
     pace = data.get("pace", "")
     fixed_elements = data.get("fixed_elements", [])
     avoid_extra = data.get("avoid_extra", "")
-    ref_character = data.get("ref_character")
+    ref_characters = data.get("ref_characters", [])
     ref_lighting = data.get("ref_lighting")
     ref_camera = data.get("ref_camera")
     ref_audio = data.get("ref_audio")
@@ -264,10 +264,14 @@ def build_prompts(data: dict) -> dict:
     else:
         parts.append(f"The final result should feel like {mood_feel} — {goal_en}.")
 
-    # References
-    if ref_character and ref_character.get("url"):
-        desc = ref_character.get("description", "")
-        parts.append(f"Character/product reference provided — maintain exact appearance throughout. {desc}".strip())
+    # References — characters/products
+    if ref_characters:
+        for rc in ref_characters:
+            label = rc.get("label", "")
+            if label:
+                parts.append(f"Reference for '{label}' provided — maintain exact appearance throughout.")
+            else:
+                parts.append("Character/product reference provided — maintain exact appearance throughout.")
     if ref_lighting and ref_lighting.get("url"):
         desc = ref_lighting.get("description", "")
         parts.append(f"Match the lighting style from the provided reference. {desc}".strip())
@@ -320,8 +324,13 @@ def build_prompts(data: dict) -> dict:
     else:
         ar_parts.append(f"الهدف: {goal_ar}.")
 
-    if ref_character and ref_character.get("url"):
-        ar_parts.append("مرجع الشخصية/المنتج مرفق — الحفاظ على المظهر الدقيق.")
+    if ref_characters:
+        for rc in ref_characters:
+            label = rc.get("label", "")
+            if label:
+                ar_parts.append(f"مرجع '{label}' مرفق — الحفاظ على المظهر الدقيق.")
+            else:
+                ar_parts.append("مرجع الشخصية/المنتج مرفق — الحفاظ على المظهر الدقيق.")
     if ref_lighting and ref_lighting.get("url"):
         ar_parts.append("مرجع الإضاءة مرفق — مطابقة أسلوب الإضاءة.")
     if ref_camera and ref_camera.get("url"):
