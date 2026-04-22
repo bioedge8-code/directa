@@ -1277,7 +1277,7 @@ function showVideoResult(videoUrl) {
       <div class="result-actions">
         <a href="${videoUrl}" download class="result-btn primary">⬇️ تحميل الفيديو</a>
         <button class="result-btn" id="btn-regenerate">🔄 أعد التوليد</button>
-        <button class="result-btn" id="btn-edit-regen">✏️ تعديل وإعادة</button>
+        <button class="result-btn" id="btn-edit-regen">💬 رجوع للمحادثة</button>
         <button class="result-btn" id="btn-new">🆕 مشروع جديد</button>
       </div>
     </div>
@@ -1320,9 +1320,8 @@ function showVideoResult(videoUrl) {
   });
 
   document.getElementById('btn-edit-regen').addEventListener('click', () => {
-    currentStep = 11;
-    show($('#nav-buttons'));
-    renderStep();
+    hide($('#wizard-view'));
+    navigate('/chat');
   });
 
   document.getElementById('btn-new').addEventListener('click', () => {
@@ -1349,7 +1348,7 @@ function showError(errorMsg) {
         <h3>حدث خطأ</h3>
         <p>${errorMsg}</p>
         <button class="result-btn" id="btn-retry" style="display:inline-block;margin:0 4px;">🔄 إعادة المحاولة</button>
-        <button class="result-btn" id="btn-back-edit" style="display:inline-block;margin:0 4px;">✏️ تعديل وإعادة</button>
+        <button class="result-btn" id="btn-back-chat" style="display:inline-block;margin:0 4px;">💬 رجوع للمحادثة</button>
       </div>
     </div>
   `;
@@ -1390,10 +1389,9 @@ function showError(errorMsg) {
     }
   });
 
-  document.getElementById('btn-back-edit').addEventListener('click', () => {
-    currentStep = 11;
-    show($('#nav-buttons'));
-    renderStep();
+  document.getElementById('btn-back-chat').addEventListener('click', () => {
+    hide($('#wizard-view'));
+    navigate('/chat');
   });
 }
 
