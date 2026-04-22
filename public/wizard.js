@@ -1231,7 +1231,7 @@ function showGenerationScreen() {
       <div class="gen-progress-track">
         <div class="gen-progress-fill" id="gen-progress"></div>
       </div>
-      <div class="gen-english" id="gen-english">${builtPrompts.english_prompt}</div>
+      <div class="gen-english" id="gen-english">${builtPrompts?.english_prompt || ''}</div>
     </div>
   `;
 
