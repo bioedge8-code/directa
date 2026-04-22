@@ -98,7 +98,14 @@ function showAuthError(msg) {
 function showApp() {
   hide($('#auth-screen'));
   show($('#app-shell'));
-  if (saved && saved.step > 1) {
+
+  // Restore saved chat if exists
+  const savedChat = localStorage.getItem('directa_chat');
+  if (savedChat && JSON.parse(savedChat).length > 0) {
+    hide($('#landing-page'));
+    show($('#chat-view'));
+    initChat();
+  } else if (saved && saved.step > 1) {
     hide($('#landing-page'));
     show($('#wizard-view'));
     renderStep();
@@ -166,6 +173,7 @@ function saveState() {
 
 function clearState() {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem('directa_chat');
 }
 
 // ── Templates ────────────────────────────────────────────────
@@ -1464,17 +1472,37 @@ function startWizard() {
 }
 
 // ── Director Chat ────────────────────────────────────────────
+const CHAT_STORAGE_KEY = 'directa_chat';
 let chatMessages = [];
 let chatAttachments = [];
+
+function saveChatState() {
+  localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatMessages));
+}
+
+function clearChatState() {
+  localStorage.removeItem(CHAT_STORAGE_KEY);
+}
 
 function initChat() {
   const container = $('#chat-messages');
   container.innerHTML = '';
-  chatMessages = [];
   chatAttachments = [];
 
-  // Director's opening message
-  addChatBubble('assistant', 'أهلاً! أنا المخرج الافتراضي 🎬\n\nوصف لي وش تبي تسوي — إعلان، ريلز، مشهد سينمائي — أو حتى فكرة بسيطة وأنا أساعدك نبنيها مع بعض.');
+  // Try restoring saved chat
+  const savedChat = JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY) || 'null');
+  if (savedChat && savedChat.length > 0) {
+    chatMessages = savedChat;
+    // Replay saved messages
+    addChatBubble('assistant', 'أهلاً! أنا المخرج الافتراضي 🎬\n\nوصف لي وش تبي تسوي — إعلان، ريلز، مشهد سينمائي — أو حتى فكرة بسيطة وأنا أساعدك نبنيها مع بعض.');
+    savedChat.forEach(msg => {
+      const text = typeof msg.content === 'string' ? msg.content : msg.content.find(c => c.type === 'text')?.text || '';
+      addChatBubble(msg.role, text);
+    });
+  } else {
+    chatMessages = [];
+    addChatBubble('assistant', 'أهلاً! أنا المخرج الافتراضي 🎬\n\nوصف لي وش تبي تسوي — إعلان، ريلز، مشهد سينمائي — أو حتى فكرة بسيطة وأنا أساعدك نبنيها مع بعض.');
+  }
 }
 
 function addChatBubble(role, text, readyData) {
@@ -1585,6 +1613,7 @@ async function sendChatMessage() {
     hideTyping();
     addChatBubble('assistant', result.message, result.ready);
     chatMessages.push({ role: 'assistant', content: result.message });
+    saveChatState();
 
   } catch (err) {
     hideTyping();
@@ -1702,7 +1731,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hide($('#chat-view'));
     show($('#landing-page'));
   });
-  $('#nav-new').addEventListener('click', startWizard);
+  $('#nav-new').addEventListener('click', () => { clearState(); startWizard(); });
   $('#nav-projects').addEventListener('click', showHistory);
 
   // Chat
