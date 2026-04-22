@@ -23,6 +23,7 @@ async function initAuth() {
   }
 
   // Show auth screen
+  history.replaceState(null, '', '/login');
   show($('#auth-screen'));
   setupAuthUI();
 }
@@ -95,20 +96,56 @@ function showAuthError(msg) {
   el.classList.add('visible');
 }
 
+// ── Router ───────────────────────────────────────────────────
+function navigate(path, replace) {
+  if (replace) {
+    history.replaceState(null, '', path);
+  } else {
+    history.pushState(null, '', path);
+  }
+  routeTo(path);
+}
+
+function routeTo(path) {
+  const views = ['#landing-page', '#chat-view', '#wizard-view', '#history-view'];
+  views.forEach(v => { const el = $(v); if (el) hide(el); });
+
+  switch (path) {
+    case '/chat':
+      show($('#chat-view'));
+      initChat();
+      break;
+    case '/projects':
+      show($('#history-view'));
+      showHistory();
+      break;
+    default:
+      show($('#landing-page'));
+      renderTemplatesOnLanding();
+      break;
+  }
+}
+
 function showApp() {
   hide($('#auth-screen'));
   show($('#app-shell'));
 
-  // Restore saved chat if exists, otherwise landing
-  const savedChat = localStorage.getItem('directa_chat');
-  if (savedChat && JSON.parse(savedChat).length > 0) {
-    hide($('#landing-page'));
-    show($('#chat-view'));
-    initChat();
+  const path = window.location.pathname;
+
+  // If on /chat and has saved chat, restore it
+  if (path === '/chat') {
+    routeTo('/chat');
+  } else if (path === '/projects') {
+    routeTo('/projects');
   } else {
-    show($('#landing-page'));
+    // Check for saved chat
+    const savedChat = localStorage.getItem('directa_chat');
+    if (savedChat && JSON.parse(savedChat).length > 0) {
+      navigate('/chat', true);
+    } else {
+      routeTo('/');
+    }
   }
-  renderTemplatesOnLanding();
 }
 
 async function logout() {
@@ -1453,19 +1490,14 @@ async function showHistory() {
 }
 
 function hideHistory() {
-  hide($('#history-view'));
-  show($('#landing-page'));
+  navigate('/');
 }
 
 
 // ── Landing Page ─────────────────────────────────────────────
 
 function startWizard() {
-  hide($('#landing-page'));
-  hide($('#history-view'));
-  hide($('#wizard-view'));
-  show($('#chat-view'));
-  initChat();
+  navigate('/chat');
 }
 
 // ── Director Chat ────────────────────────────────────────────
@@ -1716,32 +1748,19 @@ function renderTemplatesOnLanding() {
 // ── Init ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('#btn-start').addEventListener('click', startWizard);
-  $('#btn-my-projects').addEventListener('click', () => {
-    hide($('#landing-page'));
-    showHistory();
-  });
+  $('#btn-start').addEventListener('click', () => { clearState(); navigate('/chat'); });
+  $('#btn-my-projects').addEventListener('click', () => navigate('/projects'));
   $('#btn-next').addEventListener('click', goNext);
   $('#btn-back').addEventListener('click', goBack);
   $('#logout-link').addEventListener('click', logout);
 
   // Navbar
-  $('#nav-logo').addEventListener('click', () => {
-    hide($('#wizard-view'));
-    hide($('#history-view'));
-    hide($('#chat-view'));
-    show($('#landing-page'));
-  });
-  $('#nav-new').addEventListener('click', () => {
-    clearState();
-    hide($('#wizard-view'));
-    hide($('#history-view'));
-    startWizard();
-  });
-  $('#nav-projects').addEventListener('click', () => {
-    hide($('#chat-view'));
-    showHistory();
-  });
+  $('#nav-logo').addEventListener('click', () => navigate('/'));
+  $('#nav-new').addEventListener('click', () => { clearState(); navigate('/chat'); });
+  $('#nav-projects').addEventListener('click', () => navigate('/projects'));
+
+  // Browser back/forward
+  window.addEventListener('popstate', () => routeTo(window.location.pathname));
 
   // Chat
   $('#chat-send-btn').addEventListener('click', sendChatMessage);
