@@ -99,16 +99,12 @@ function showApp() {
   hide($('#auth-screen'));
   show($('#app-shell'));
 
-  // Restore saved chat if exists
+  // Restore saved chat if exists, otherwise landing
   const savedChat = localStorage.getItem('directa_chat');
   if (savedChat && JSON.parse(savedChat).length > 0) {
     hide($('#landing-page'));
     show($('#chat-view'));
     initChat();
-  } else if (saved && saved.step > 1) {
-    hide($('#landing-page'));
-    show($('#wizard-view'));
-    renderStep();
   } else {
     show($('#landing-page'));
   }
@@ -1731,8 +1727,16 @@ document.addEventListener('DOMContentLoaded', () => {
     hide($('#chat-view'));
     show($('#landing-page'));
   });
-  $('#nav-new').addEventListener('click', () => { clearState(); startWizard(); });
-  $('#nav-projects').addEventListener('click', showHistory);
+  $('#nav-new').addEventListener('click', () => {
+    clearState();
+    hide($('#wizard-view'));
+    hide($('#history-view'));
+    startWizard();
+  });
+  $('#nav-projects').addEventListener('click', () => {
+    hide($('#chat-view'));
+    showHistory();
+  });
 
   // Chat
   $('#chat-send-btn').addEventListener('click', sendChatMessage);
