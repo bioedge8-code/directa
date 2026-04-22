@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from lib.prompt_builder import build_prompts
+from lib.director_chat import chat as director_chat
 from lib.fal_client import submit_generation as fal_submit, check_status as fal_check
 from lib.google_client import generate_keyframe, submit_video as veo_submit, check_video_status as veo_check
 from lib.supabase_client import (
@@ -43,6 +44,20 @@ async def api_auth_config():
     if not url or not anon_key:
         raise HTTPException(404, "Auth not configured")
     return {"url": url, "anon_key": anon_key}
+
+
+# ── Director Chat ────────────────────────────────────────────
+
+class ChatRequest(BaseModel):
+    messages: list
+
+@app.post("/api/chat")
+async def api_chat(req: ChatRequest):
+    try:
+        result = director_chat(req.messages)
+        return result
+    except Exception as e:
+        raise HTTPException(500, f"خطأ في المحادثة: {str(e)[:200]}")
 
 
 # ── Upload Reference ─────────────────────────────────────────

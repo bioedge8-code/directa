@@ -51,9 +51,25 @@
         <div class="landing-badge">AI Video Generation</div>
         <div class="landing-logo">Direct<span>a</span></div>
         <div class="landing-tagline">حوّل رؤيتك إلى فيديو سينمائي</div>
-        <div class="landing-sub">اختر، وصف، وخلّ الذكاء الاصطناعي يخرج لك المشهد</div>
-        <button class="landing-btn" id="btn-start">ابدأ مشروع جديد</button>
+        <div class="landing-sub">وصف رؤيتك والمخرج الافتراضي يبني لك المشهد</div>
+        <button class="landing-btn" id="btn-start">ابدأ مع المخرج</button>
         <div id="landing-templates"></div>
+      </div>
+    </div>
+
+    <!-- Director Chat -->
+    <div id="chat-view" class="hidden">
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+          <div class="chat-upload-bar" id="chat-upload-bar"></div>
+          <div class="chat-input-row">
+            <input type="file" id="chat-file-input" accept="image/*" style="display:none" multiple>
+            <button class="chat-attach-btn" id="chat-attach-btn" title="إرفاق صورة">📎</button>
+            <input class="chat-input" id="chat-input" placeholder="اكتب رؤيتك للمشهد..." autofocus>
+            <button class="chat-send-btn" id="chat-send-btn">إرسال</button>
+          </div>
+        </div>
       </div>
     </div>
 

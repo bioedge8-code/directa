@@ -1458,8 +1458,203 @@ function hideHistory() {
 function startWizard() {
   hide($('#landing-page'));
   hide($('#history-view'));
-  show($('#wizard-view'));
-  renderStep();
+  hide($('#wizard-view'));
+  show($('#chat-view'));
+  initChat();
+}
+
+// ── Director Chat ────────────────────────────────────────────
+let chatMessages = [];
+let chatAttachments = [];
+
+function initChat() {
+  const container = $('#chat-messages');
+  container.innerHTML = '';
+  chatMessages = [];
+  chatAttachments = [];
+
+  // Director's opening message
+  addChatBubble('assistant', 'أهلاً! أنا المخرج الافتراضي 🎬\n\nوصف لي وش تبي تسوي — إعلان، ريلز، مشهد سينمائي — أو حتى فكرة بسيطة وأنا أساعدك نبنيها مع بعض.');
+}
+
+function addChatBubble(role, text, readyData) {
+  const container = $('#chat-messages');
+  const bubble = document.createElement('div');
+  bubble.className = `chat-bubble ${role}`;
+  bubble.textContent = text;
+
+  // If assistant has ready data — add generate button
+  if (readyData) {
+    const card = document.createElement('div');
+    card.className = 'chat-ready-card';
+    card.innerHTML = '<div style="font-size:0.78rem;color:var(--accent);font-weight:700;margin-bottom:6px;">المشهد جاهز للتوليد</div>';
+
+    const btn = document.createElement('button');
+    btn.className = 'chat-ready-btn';
+    btn.textContent = '⚡ ابدأ التوليد';
+    btn.addEventListener('click', () => startGenerationFromChat(readyData, btn));
+    card.appendChild(btn);
+    bubble.appendChild(card);
+  }
+
+  // If user has attachments, show thumbs
+  if (role === 'user' && chatAttachments.length > 0) {
+    const thumbs = document.createElement('div');
+    thumbs.className = 'chat-ref-thumbs';
+    chatAttachments.forEach(a => {
+      const img = document.createElement('img');
+      img.src = a.localUrl || a.url;
+      thumbs.appendChild(img);
+    });
+    bubble.appendChild(thumbs);
+  }
+
+  container.appendChild(bubble);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = $('#chat-messages');
+  const el = document.createElement('div');
+  el.className = 'chat-typing';
+  el.id = 'chat-typing';
+  el.innerHTML = 'المخرج يفكر<span class="dots">...</span>';
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('chat-typing');
+  if (el) el.remove();
+}
+
+async function sendChatMessage() {
+  const input = $('#chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  const sendBtn = $('#chat-send-btn');
+  sendBtn.disabled = true;
+
+  // Upload attachments first
+  const uploadedRefs = [];
+  for (const att of chatAttachments) {
+    if (!att.uploaded) {
+      try {
+        const formData = new FormData();
+        formData.append('file', att.file);
+        formData.append('purpose', 'character');
+        formData.append('session_id', SESSION_ID);
+        const result = await api('/api/upload-reference', { method: 'POST', body: formData });
+        att.url = result.url;
+        att.uploaded = true;
+        uploadedRefs.push(result);
+      } catch (e) { /* ignore failed uploads */ }
+    }
+  }
+
+  // Add user message with image refs
+  addChatBubble('user', text);
+
+  // Build message for Claude
+  const userContent = [];
+  chatAttachments.forEach(att => {
+    if (att.url) {
+      userContent.push({
+        type: 'image',
+        source: { type: 'url', url: att.url },
+      });
+    }
+  });
+  userContent.push({ type: 'text', text });
+
+  chatMessages.push({ role: 'user', content: userContent });
+  chatAttachments = [];
+  $('#chat-upload-bar').innerHTML = '';
+
+  showTyping();
+
+  try {
+    const result = await api('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatMessages }),
+    });
+
+    hideTyping();
+    addChatBubble('assistant', result.message, result.ready);
+    chatMessages.push({ role: 'assistant', content: result.message });
+
+  } catch (err) {
+    hideTyping();
+    addChatBubble('assistant', 'عذراً، حدث خطأ. حاول مرة ثانية.');
+  }
+
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+function addChatAttachment(file) {
+  const localUrl = URL.createObjectURL(file);
+  chatAttachments.push({ file, localUrl, uploaded: false });
+
+  const bar = $('#chat-upload-bar');
+  const thumb = document.createElement('div');
+  thumb.className = 'chat-upload-thumb';
+  thumb.innerHTML = `<img src="${localUrl}"><button class="remove">✕</button>`;
+  thumb.querySelector('.remove').addEventListener('click', () => {
+    const idx = chatAttachments.findIndex(a => a.localUrl === localUrl);
+    if (idx >= 0) chatAttachments.splice(idx, 1);
+    thumb.remove();
+  });
+  bar.appendChild(thumb);
+}
+
+async function startGenerationFromChat(readyData, btn) {
+  btn.disabled = true;
+  btn.textContent = 'جاري الإرسال...';
+
+  // Collect uploaded references
+  const references = [];
+  chatMessages.forEach(msg => {
+    if (msg.role === 'user' && Array.isArray(msg.content)) {
+      msg.content.forEach(c => {
+        if (c.type === 'image' && c.source && c.source.url) {
+          references.push({ purpose: 'character', url: c.source.url, file_type: 'png' });
+        }
+      });
+    }
+  });
+
+  try {
+    const result = await api('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: SESSION_ID,
+        wizard_data: readyData,
+        english_prompt: readyData.english_prompt,
+        arabic_prompt: readyData.subject || '',
+        references,
+        duration: '10',
+        aspect_ratio: '16:9',
+        resolution: '720p',
+        provider: 'seedance',
+      }),
+    });
+
+    generationId = result.generation_id;
+
+    // Switch to generation view
+    hide($('#chat-view'));
+    show($('#wizard-view'));
+    showGenerationScreen();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '⚡ ابدأ التوليد';
+    alert('خطأ: ' + err.message);
+  }
 }
 
 function renderTemplatesOnLanding() {
@@ -1504,10 +1699,22 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#nav-logo').addEventListener('click', () => {
     hide($('#wizard-view'));
     hide($('#history-view'));
+    hide($('#chat-view'));
     show($('#landing-page'));
   });
   $('#nav-new').addEventListener('click', startWizard);
   $('#nav-projects').addEventListener('click', showHistory);
+
+  // Chat
+  $('#chat-send-btn').addEventListener('click', sendChatMessage);
+  $('#chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+  });
+  $('#chat-attach-btn').addEventListener('click', () => $('#chat-file-input').click());
+  $('#chat-file-input').addEventListener('change', () => {
+    Array.from($('#chat-file-input').files).forEach(f => addChatAttachment(f));
+    $('#chat-file-input').value = '';
+  });
 
   initAuth();
 });
