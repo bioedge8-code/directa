@@ -1598,6 +1598,11 @@ async function sendChatMessage() {
   input.value = '';
   const sendBtn = $('#chat-send-btn');
   sendBtn.disabled = true;
+  sendBtn.textContent = '...';
+
+  // Show user message immediately
+  addChatBubble('user', text);
+  showTyping();
 
   // Upload attachments first
   const uploadedRefs = [];
@@ -1615,9 +1620,6 @@ async function sendChatMessage() {
       } catch (e) { /* ignore failed uploads */ }
     }
   }
-
-  // Add user message with image refs
-  addChatBubble('user', text);
 
   // Build message for Claude
   const userContent = [];
@@ -1643,8 +1645,6 @@ async function sendChatMessage() {
   chatAttachments = [];
   $('#chat-upload-bar').innerHTML = '';
 
-  showTyping();
-
   try {
     const result = await api('/api/chat', {
       method: 'POST',
@@ -1663,6 +1663,7 @@ async function sendChatMessage() {
   }
 
   sendBtn.disabled = false;
+  sendBtn.textContent = 'إرسال';
   input.focus();
 }
 
