@@ -1646,16 +1646,100 @@ async function sendChatMessage() {
   $('#chat-upload-bar').innerHTML = '';
 
   try {
-    const result = await api('/api/chat', {
+    const resp = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: chatMessages }),
     });
 
     hideTyping();
-    addChatBubble('assistant', result.message, result.ready);
-    chatMessages.push({ role: 'assistant', content: result.message });
+
+    // Create assistant bubble for streaming
+    const container = $('#chat-messages');
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble assistant';
+    container.appendChild(bubble);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+    let readyData = null;
+    let previews = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'text') {
+            fullText += data.text;
+            bubble.textContent = fullText;
+            container.scrollTop = container.scrollHeight;
+          } else if (data.type === 'done') {
+            readyData = data.ready;
+            previews = data.previews || [];
+          } else if (data.type === 'error') {
+            bubble.textContent = 'عذراً، حدث خطأ: ' + data.error;
+          }
+        } catch (e) { /* ignore parse errors */ }
+      }
+    }
+
+    // Clean display text (remove any remaining code blocks)
+    let displayText = fullText;
+    if (displayText.includes('```DIRECTA_READY')) {
+      displayText = displayText.substring(0, displayText.indexOf('```DIRECTA_READY')).trim();
+    }
+    if (displayText.includes('```GENERATE_PREVIEW')) {
+      displayText = displayText.replace(/```GENERATE_PREVIEW[\s\S]*?```/g, '').trim();
+    }
+    bubble.textContent = displayText;
+
+    // Show preview images
+    if (previews.length > 0) {
+      const previewDiv = document.createElement('div');
+      previewDiv.className = 'chat-ref-thumbs';
+      previewDiv.style.marginTop = '10px';
+      previews.forEach(pv => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'text-align:center;';
+        const img = document.createElement('img');
+        img.src = pv.data;
+        img.style.cssText = 'width:120px;height:auto;border-radius:8px;border:1px solid var(--border);';
+        wrap.appendChild(img);
+        if (pv.purpose) {
+          const label = document.createElement('div');
+          label.style.cssText = 'font-size:0.68rem;color:var(--muted);margin-top:3px;';
+          label.textContent = pv.purpose;
+          wrap.appendChild(label);
+        }
+        previewDiv.appendChild(wrap);
+      });
+      bubble.appendChild(previewDiv);
+    }
+
+    // Show generate button if ready
+    if (readyData) {
+      const card = document.createElement('div');
+      card.className = 'chat-ready-card';
+      card.innerHTML = '<div style="font-size:0.78rem;color:var(--accent);font-weight:700;margin-bottom:6px;">المشهد جاهز للتوليد</div>';
+      const btn = document.createElement('button');
+      btn.className = 'chat-ready-btn';
+      btn.textContent = '⚡ ابدأ التوليد';
+      btn.addEventListener('click', () => startGenerationFromChat(readyData, btn));
+      card.appendChild(btn);
+      bubble.appendChild(card);
+    }
+
+    chatMessages.push({ role: 'assistant', content: displayText });
     saveChatState();
+    container.scrollTop = container.scrollHeight;
 
   } catch (err) {
     hideTyping();

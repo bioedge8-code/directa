@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from lib.prompt_builder import build_prompts
-from lib.director_chat import chat as director_chat
+from lib.director_chat import chat_stream, parse_response
 from lib.fal_client import submit_generation as fal_submit, check_status as fal_check
 from lib.google_client import generate_keyframe, submit_video as veo_submit, check_video_status as veo_check
 from lib.supabase_client import (
@@ -46,16 +46,63 @@ async def api_auth_config():
     return {"url": url, "anon_key": anon_key}
 
 
-# ── Director Chat ────────────────────────────────────────────
+# ── Director Chat (Streaming) ─────────────────────────────────
+
+from fastapi.responses import StreamingResponse
+import json as _json
 
 class ChatRequest(BaseModel):
     messages: list
 
+@app.post("/api/chat/stream")
+async def api_chat_stream(req: ChatRequest):
+    def event_stream():
+        full_text = ""
+        try:
+            for chunk in chat_stream(req.messages):
+                if isinstance(chunk, dict) and "__done__" in chunk:
+                    # Parse the full response for structured data
+                    parsed = parse_response(full_text)
+                    # Generate preview images if requested
+                    preview_urls = []
+                    for pv in parsed.get("previews", []):
+                        try:
+                            img_bytes = generate_keyframe(pv["prompt"])
+                            import base64
+                            b64 = base64.b64encode(img_bytes).decode()
+                            preview_urls.append({
+                                "data": f"data:image/png;base64,{b64}",
+                                "purpose": pv.get("purpose", ""),
+                            })
+                        except Exception:
+                            pass
+
+                    yield f"data: {_json.dumps({'type': 'done', 'ready': parsed.get('ready'), 'previews': preview_urls, 'usage': chunk['usage']})}\n\n"
+                else:
+                    full_text += chunk
+                    yield f"data: {_json.dumps({'type': 'text', 'text': chunk})}\n\n"
+        except Exception as e:
+            yield f"data: {_json.dumps({'type': 'error', 'error': str(e)[:200]})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+# Non-streaming fallback
 @app.post("/api/chat")
 async def api_chat(req: ChatRequest):
     try:
-        result = director_chat(req.messages)
-        return result
+        full_text = ""
+        usage = {}
+        for chunk in chat_stream(req.messages):
+            if isinstance(chunk, dict) and "__done__" in chunk:
+                usage = chunk["usage"]
+            else:
+                full_text += chunk
+        parsed = parse_response(full_text)
+        return {
+            "message": parsed["display_text"],
+            "ready": parsed.get("ready"),
+            "usage": usage,
+        }
     except Exception as e:
         raise HTTPException(500, f"خطأ في المحادثة: {str(e)[:200]}")
 
