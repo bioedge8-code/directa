@@ -1558,10 +1558,10 @@ function addChatBubble(role, text, readyData) {
     thumbs.className = 'chat-ref-thumbs';
     chatAttachments.forEach(a => {
       if (a.file && a.file.type === 'application/pdf') {
-        const span = document.createElement('span');
-        span.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:0.72rem;';
-        span.textContent = '📄 ' + a.file.name;
-        thumbs.appendChild(span);
+        const pill = document.createElement('div');
+        pill.style.cssText = 'background:#fff;border:1px solid #ddd;border-radius:8px;padding:6px 10px;font-size:0.75rem;color:#333;display:flex;align-items:center;gap:4px;max-width:200px;';
+        pill.innerHTML = `<span style="font-size:1.1rem;">📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.file.name}</span>`;
+        thumbs.appendChild(pill);
       } else {
         const img = document.createElement('img');
         img.src = a.localUrl || a.url;
@@ -1593,7 +1593,7 @@ function hideTyping() {
 async function sendChatMessage() {
   const input = $('#chat-input');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && chatAttachments.length === 0) return;
 
   input.value = '';
   const sendBtn = $('#chat-send-btn');
@@ -1601,7 +1601,7 @@ async function sendChatMessage() {
   sendBtn.textContent = '...';
 
   // Show user message immediately
-  addChatBubble('user', text);
+  addChatBubble('user', text || (chatAttachments.length > 0 ? 'ملفات مرفقة' : ''));
   showTyping();
 
   // Upload attachments first
@@ -1639,7 +1639,7 @@ async function sendChatMessage() {
       });
     }
   }
-  userContent.push({ type: 'text', text });
+  userContent.push({ type: 'text', text: text || 'المستخدم أرسل الملفات المرفقة' });
 
   chatMessages.push({ role: 'user', content: userContent });
   chatAttachments = [];
