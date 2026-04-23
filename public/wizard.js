@@ -1458,7 +1458,8 @@ async function showHistory() {
       el.addEventListener('click', (e) => {
         if (e.target.classList.contains('history-delete-btn')) return;
         if (item.status === 'done' && item.video_url) {
-          hideHistory();
+          hide($('#history-view'));
+          show($('#wizard-view'));
           generationId = item.id;
           showVideoResult(item.video_url);
         }
